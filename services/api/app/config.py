@@ -100,7 +100,7 @@ class Settings(BaseSettings):
     SMS_GATEWAY_URL: str = ""
     SMS_GATEWAY_API_KEY: str = ""
     SMS_GATEWAY_SENDER_ID: str = "whISP"
-    SMS_GATEWAY_PROVIDER: str = "twilio"  # twilio | infobip | custom
+    SMS_GATEWAY_PROVIDER: str = "ssl_wireless"  # ssl_wireless | infobip | custom
 
     # ------------------------------------------------------------------
     # Firebase Cloud Messaging
