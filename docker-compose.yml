@@ -1,0 +1,124 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: isp_platform
+      POSTGRES_USER: isp_user
+      POSTGRES_PASSWORD: isp_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U isp_user -d isp_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    depends_on:
+      - zookeeper
+    ports:
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  api:
+    build: ./services/api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://isp_user:isp_password@postgres:5432/isp_platform
+      RADIUS_DB_URL: postgresql+asyncpg://isp_user:isp_password@postgres:5432/isp_platform
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./services/api:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  billing:
+    build: ./services/billing
+    depends_on:
+      - postgres
+      - redis
+      - kafka
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
+      REDIS_URL: redis://redis:6379/0
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    restart: unless-stopped
+
+  coa-engine:
+    build: ./services/coa-engine
+    depends_on:
+      - postgres
+      - kafka
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    restart: unless-stopped
+
+  notification:
+    build: ./services/notification
+    depends_on:
+      - postgres
+      - kafka
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    restart: unless-stopped
+
+  radius-consumer:
+    build: ./services/radius-consumer
+    depends_on:
+      - postgres
+      - kafka
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  zookeeper_data:
+  kafka_data:

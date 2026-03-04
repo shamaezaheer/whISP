@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  namespace: whisp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: api
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+      - name: api
+        image: whisp/api:latest
+        ports:
+        - containerPort: 8000
+        envFrom:
+        - secretRef:
+            name: whisp-secrets
+        - configMapRef:
+            name: whisp-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  namespace: whisp
+spec:
+  selector:
+    app: api
+  ports:
+  - port: 8000
+    targetPort: 8000
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api-hpa
+  namespace: whisp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: api
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing
+  namespace: whisp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: billing
+  template:
+    metadata:
+      labels:
+        app: billing
+    spec:
+      containers:
+      - name: billing
+        image: whisp/billing:latest
+        envFrom:
+        - secretRef:
+            name: whisp-secrets
+        - configMapRef:
+            name: whisp-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: coa-engine
+  namespace: whisp
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: coa-engine
+  template:
+    metadata:
+      labels:
+        app: coa-engine
+    spec:
+      containers:
+      - name: coa-engine
+        image: whisp/coa-engine:latest
+        envFrom:
+        - secretRef:
+            name: whisp-secrets
+        - configMapRef:
+            name: whisp-config
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: radius-consumer
+  namespace: whisp
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: radius-consumer
+  template:
+    metadata:
+      labels:
+        app: radius-consumer
+    spec:
+      containers:
+      - name: radius-consumer
+        image: whisp/radius-consumer:latest
+        envFrom:
+        - secretRef:
+            name: whisp-secrets
+        - configMapRef:
+            name: whisp-config
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: radius-consumer-hpa
+  namespace: whisp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: radius-consumer
+  minReplicas: 3
+  maxReplicas: 12
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
