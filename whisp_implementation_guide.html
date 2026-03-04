@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>whISP – Implementation Guide</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Fira+Code:wght@400;500&display=swap');
+
+  :root {
+    --accent: #00cc6a;
+    --accent2: #0088ff;
+    --dark: #0d0d0d;
+    --mid: #1a1a2e;
+    --muted: #555;
+    --border: #dde1e7;
+    --bg-code: #f4f6fa;
+    --text: #1a1a2e;
+    --section-bg: #f8fafc;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 10.5pt;
+    line-height: 1.65;
+    color: var(--text);
+    background: #fff;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    page-break-after: always;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px;
+    background: var(--dark);
+    color: #fff;
+  }
+  .cover-brand { font-size: 56pt; font-weight: 700; color: var(--accent); letter-spacing: -2px; margin-bottom: 8px; }
+  .cover-tagline { font-size: 14pt; color: #aaa; margin-bottom: 48px; }
+  .cover-title { font-size: 26pt; font-weight: 700; margin-bottom: 12px; line-height: 1.2; }
+  .cover-sub { font-size: 12pt; color: #aaa; margin-bottom: 60px; }
+  .cover-meta { display: flex; gap: 40px; }
+  .cover-meta-item label { display: block; font-size: 8pt; color: #555; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .cover-meta-item span { font-size: 10pt; color: #ccc; }
+  .cover-line { width: 60px; height: 3px; background: var(--accent); margin-bottom: 40px; }
+
+  /* ── TOC ── */
+  .toc-page {
+    page-break-after: always;
+    padding: 60px 60px 40px;
+  }
+  .toc-page h1 { font-size: 20pt; margin-bottom: 32px; border-bottom: 2px solid var(--border); padding-bottom: 12px; }
+  .toc-entry { display: flex; align-items: baseline; gap: 6px; margin-bottom: 7px; font-size: 10pt; }
+  .toc-num { color: var(--accent); font-weight: 700; min-width: 26px; }
+  .toc-label { flex: 1; }
+  .toc-dots { flex: 1; border-bottom: 1px dotted #bbb; margin: 0 6px; height: 10px; }
+  .toc-sub { padding-left: 26px; margin-bottom: 5px; font-size: 9.5pt; color: var(--muted); }
+
+  /* ── General page layout ── */
+  .content { padding: 52px 60px; }
+  .section { margin-bottom: 40px; }
+
+  h1 { font-size: 20pt; font-weight: 700; color: var(--dark); margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border); }
+  h2 { font-size: 13pt; font-weight: 700; color: var(--mid); margin: 28px 0 12px; }
+  h3 { font-size: 11pt; font-weight: 700; color: var(--mid); margin: 20px 0 8px; }
+  h4 { font-size: 10pt; font-weight: 700; margin: 14px 0 6px; }
+  p  { margin-bottom: 10px; }
+
+  /* Section number chip */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border);
+    page-break-after: avoid;
+  }
+  .section-num {
+    background: var(--accent);
+    color: #fff;
+    font-size: 9pt;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .section-header h1 {
+    margin: 0;
+    padding: 0;
+    border: none;
+    font-size: 18pt;
+  }
+
+  /* Code blocks */
+  pre {
+    background: var(--dark);
+    color: #d4d4d4;
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 8pt;
+    padding: 16px 18px;
+    border-radius: 6px;
+    overflow: hidden;
+    margin: 12px 0 16px;
+    white-space: pre-wrap;
+    word-break: break-all;
+    border-left: 3px solid var(--accent);
+  }
+  code {
+    font-family: 'Fira Code', 'Courier New', monospace;
+    font-size: 8.5pt;
+    background: var(--bg-code);
+    color: #c7254e;
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 9.5pt; }
+  th { background: var(--dark); color: #fff; padding: 8px 12px; text-align: left; font-weight: 600; font-size: 9pt; }
+  td { padding: 7px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:nth-child(even) td { background: var(--section-bg); }
+
+  /* Callout boxes */
+  .callout { padding: 14px 18px; border-radius: 6px; margin: 14px 0; font-size: 9.5pt; }
+  .callout-info { background: #eff8ff; border-left: 4px solid #0088ff; }
+  .callout-warn { background: #fffbea; border-left: 4px solid #f59e0b; }
+  .callout-danger { background: #fff0f0; border-left: 4px solid #ef4444; }
+  .callout-success { background: #f0fff6; border-left: 4px solid #00cc6a; }
+  .callout strong { display: block; margin-bottom: 4px; }
+
+  /* Lists */
+  ul, ol { margin: 8px 0 14px 22px; }
+  li { margin-bottom: 5px; }
+
+  /* Chip badges */
+  .chip { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 8pt; font-weight: 600; margin: 2px; }
+  .chip-green { background: #d1fae5; color: #065f46; }
+  .chip-blue  { background: #dbeafe; color: #1e40af; }
+  .chip-yellow { background: #fef9c3; color: #854d0e; }
+  .chip-red { background: #fee2e2; color: #991b1b; }
+  .chip-grey { background: #f3f4f6; color: #374151; }
+
+  /* Arch diagram box */
+  .arch { background: var(--dark); color: #d4d4d4; font-family: 'Fira Code', monospace; font-size: 8pt; padding: 20px; border-radius: 8px; margin: 16px 0; white-space: pre; line-height: 1.5; }
+
+  /* Divider */
+  hr { border: none; border-top: 1px solid var(--border); margin: 28px 0; }
+
+  /* Page breaks */
+  .page-break { page-break-before: always; }
+  h1 + .callout { page-break-inside: avoid; }
+
+  /* Footer via @page */
+  @page {
+    size: A4;
+    margin: 18mm 20mm 22mm;
+    @bottom-center {
+      content: "whISP Implementation Guide  ·  Confidential  ·  Page " counter(page);
+      font-size: 8pt;
+      color: #999;
+    }
+  }
+  @page :first { @bottom-center { content: ""; } }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════════ COVER ══ -->
+<div class="cover">
+  <div class="cover-brand">whISP</div>
+  <div class="cover-tagline">Internet Service Provider Management Platform</div>
+  <div class="cover-line"></div>
+  <div class="cover-title">Implementation Guide</div>
+  <div class="cover-sub">Architecture · Setup · API Reference · Deployment</div>
+  <div class="cover-meta">
+    <div class="cover-meta-item"><label>Version</label><span>1.0</span></div>
+    <div class="cover-meta-item"><label>Platform</label><span>Bangladesh</span></div>
+    <div class="cover-meta-item"><label>Date</label><span>March 2026</span></div>
+    <div class="cover-meta-item"><label>Status</label><span>Internal Use</span></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ TOC ══ -->
+<div class="toc-page">
+  <h1>Table of Contents</h1>
+  <div class="toc-entry"><span class="toc-num">1</span><span class="toc-label">Architecture Overview</span></div>
+  <div class="toc-entry"><span class="toc-num">2</span><span class="toc-label">Prerequisites</span></div>
+  <div class="toc-entry"><span class="toc-num">3</span><span class="toc-label">Local Development Setup</span></div>
+  <div class="toc-entry"><span class="toc-num">4</span><span class="toc-label">Environment Configuration</span></div>
+  <div class="toc-entry"><span class="toc-num">5</span><span class="toc-label">Database Setup &amp; Migrations</span></div>
+  <div class="toc-entry"><span class="toc-num">6</span><span class="toc-label">Services Reference</span></div>
+  <div class="toc-sub">6.1 API Service · 6.2 Billing Service · 6.3 CoA Engine · 6.4 Notification Service · 6.5 RADIUS Consumer</div>
+  <div class="toc-entry"><span class="toc-num">7</span><span class="toc-label">API Endpoints Reference</span></div>
+  <div class="toc-sub">Auth · Subscribers · Payments · Plans · Franchisees · Usage · OTT · Tickets · Admin</div>
+  <div class="toc-entry"><span class="toc-num">8</span><span class="toc-label">Payment Gateway Integration</span></div>
+  <div class="toc-sub">8.1 bKash PGW · 8.2 Nagad · 8.3 SSLCommerz · Post-payment flow</div>
+  <div class="toc-entry"><span class="toc-num">9</span><span class="toc-label">SMS Gateway (SSL Wireless)</span></div>
+  <div class="toc-entry"><span class="toc-num">10</span><span class="toc-label">RADIUS / FreeRADIUS Integration</span></div>
+  <div class="toc-entry"><span class="toc-num">11</span><span class="toc-label">OTT Partner Integration</span></div>
+  <div class="toc-entry"><span class="toc-num">12</span><span class="toc-label">Frontend Setup</span></div>
+  <div class="toc-sub">12.1 Franchisee CMS · 12.2 User Portal</div>
+  <div class="toc-entry"><span class="toc-num">13</span><span class="toc-label">Running Tests</span></div>
+  <div class="toc-entry"><span class="toc-num">14</span><span class="toc-label">Production Deployment (Kubernetes)</span></div>
+  <div class="toc-entry"><span class="toc-num">15</span><span class="toc-label">Troubleshooting</span></div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §1 ══ -->
+<div class="content">
+<div class="section">
+  <div class="section-header"><span class="section-num">§1</span><h1>Architecture Overview</h1></div>
+
+  <div class="arch">Internet
+   │
+   ▼
+┌──────────┐      ┌──────────────────────────────────────────────────────┐
+│  Nginx   │      │                   Docker / K8s                       │
+│ :80/:443 │─────▶│  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
+└──────────┘      │  │  User    │  │Franchisee│  │   FastAPI (API)  │  │
+                  │  │  Portal  │  │   CMS    │  │     :8000        │  │
+                  │  │  :3001   │  │  :3000   │  └────────┬─────────┘  │
+                  │  └──────────┘  └──────────┘           │            │
+                  │                              ┌─────────▼──────────┐ │
+                  │                              │ PostgreSQL +        │ │
+                  │                              │ TimescaleDB        │ │
+                  │                              │ Redis  │  Kafka     │ │
+                  │                              └─────────┬──────────┘ │
+                  │       ┌──────────────────────┼──────────────────┐   │
+                  │       ▼                      ▼                  ▼   │
+                  │  ┌─────────┐  ┌──────────────────┐  ┌──────────────┐│
+                  │  │ Billing │  │  Notification    │  │RADIUS Consumer│
+                  │  │ Engine  │  │    Service       │  │ (Kafka→TSDB) │
+                  │  └─────────┘  └──────────────────┘  └──────────────┘
+                  │                      │
+                  │  ┌───────────────────▼──────────────────────────┐
+                  │  │              CoA Engine                       │
+                  │  │  (UDP RFC 5176 → MikroTik / FreeRADIUS)      │
+                  │  └───────────────────────────────────────────────┘
+                  └──────────────────────────────────────────────────────┘</div>
+
+  <h2>Services</h2>
+  <table>
+    <tr><th>Service</th><th>Port</th><th>Role</th></tr>
+    <tr><td><code>api</code></td><td>8000</td><td>Main FastAPI REST backend</td></tr>
+    <tr><td><code>billing</code></td><td>—</td><td>APScheduler – expiry, auto-debit, reconciliation</td></tr>
+    <tr><td><code>coa-engine</code></td><td>—</td><td>RADIUS CoA/Disconnect UDP packets (RFC 5176)</td></tr>
+    <tr><td><code>notification</code></td><td>—</td><td>SMS (SSL Wireless) + FCM push via Kafka</td></tr>
+    <tr><td><code>radius-consumer</code></td><td>—</td><td>Kafka → TimescaleDB usage ingest</td></tr>
+    <tr><td><code>franchisee-cms</code></td><td>3000</td><td>React CMS for franchisee staff</td></tr>
+    <tr><td><code>user-portal</code></td><td>3001</td><td>React self-service portal for subscribers (Bengali)</td></tr>
+  </table>
+
+  <h2>Data Stores</h2>
+  <table>
+    <tr><th>Store</th><th>Use</th></tr>
+    <tr><td>PostgreSQL 15</td><td>All relational data (12 tables)</td></tr>
+    <tr><td>TimescaleDB extension</td><td><code>usage_stats</code> hypertable (time-series bandwidth data)</td></tr>
+    <tr><td>Redis 7</td><td>JWT blacklist, session cache, rate-limit buckets</td></tr>
+    <tr><td>Kafka</td><td>Billing events, RADIUS accounting, notifications</td></tr>
+    <tr><td>FreeRADIUS (external)</td><td>PPPoE AAA; writes to a shared <code>radius</code> DB schema</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §2 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§2</span><h1>Prerequisites</h1></div>
+
+  <h2>Required Software</h2>
+  <pre>docker        >= 24.0
+docker compose >= 2.20
+python        >= 3.11      # only for outside-Docker runs
+node          >= 20        # only for frontend dev
+git           >= 2.40</pre>
+
+  <h2>Python Tooling</h2>
+  <pre>pip install pipx
+pipx install poetry</pre>
+
+  <h2>Bangladeshi Operator Registrations</h2>
+  <p>Before going live you will need active accounts with the following providers:</p>
+  <table>
+    <tr><th>Provider</th><th>Purpose</th><th>Sandbox URL</th></tr>
+    <tr><td>SSL Wireless</td><td>SMS OTP / alerts</td><td>sms.sslwireless.com</td></tr>
+    <tr><td>bKash PGW</td><td>Mobile payments</td><td>sandbox.payment.bka.sh</td></tr>
+    <tr><td>Nagad</td><td>Mobile payments</td><td>sandbox.nagad.com.bd</td></tr>
+    <tr><td>SSLCommerz</td><td>Card + MFS payments</td><td>sandbox.sslcommerz.com</td></tr>
+    <tr><td>Chorki</td><td>OTT partnership</td><td>Contact partner team</td></tr>
+    <tr><td>Hoichoi</td><td>OTT partnership</td><td>Contact partner team</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §3 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§3</span><h1>Local Development Setup</h1></div>
+
+  <h2>Step 1 – Clone and configure</h2>
+  <pre>git clone &lt;repo-url&gt; whISP
+cd whISP
+cp .env.example .env
+# Edit .env – see §4 for all variables</pre>
+
+  <h2>Step 2 – Start infrastructure services</h2>
+  <pre>docker compose up -d postgres redis zookeeper kafka
+# Wait ~30 s until all four show "(healthy)"
+docker compose ps</pre>
+
+  <h2>Step 3 – Run database migrations</h2>
+  <pre>docker compose run --rm api alembic upgrade head</pre>
+  <p>Or locally (Python + deps installed):</p>
+  <pre>cd services/api
+pip install -r requirements.txt
+PYTHONPATH=. alembic -c ../../alembic.ini upgrade head</pre>
+
+  <h2>Step 4 – Seed development data</h2>
+  <pre>docker compose run --rm api python scripts/seed_dev.py
+# Creates: 3 franchisees, 5 plans, 100 subscribers</pre>
+
+  <h2>Step 5 – Start application services</h2>
+  <pre>docker compose up -d api billing coa-engine notification radius-consumer
+docker compose logs -f api
+# Expected: database_connected, redis_connected, startup_complete</pre>
+
+  <h2>Step 6 – Start frontend (optional)</h2>
+  <pre># Franchisee CMS
+cd frontend/franchisee-cms &amp;&amp; npm install &amp;&amp; npm run dev   # http://localhost:3000
+
+# User portal (new terminal)
+cd frontend/user-portal &amp;&amp; npm install &amp;&amp; npm run dev      # http://localhost:3001</pre>
+
+  <h2>Verify</h2>
+  <pre>curl http://localhost:8000/health
+# {"status":"ok","redis":"connected","version":"..."}</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §4 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§4</span><h1>Environment Configuration</h1></div>
+  <p>Full annotated reference for <code>.env</code> (copy from <code>.env.example</code>):</p>
+
+  <h2>Core</h2>
+  <pre>PLATFORM_NAME=whISP
+PLATFORM_DOMAIN=yourdomain.com.bd
+ENVIRONMENT=development          # development | staging | production
+DEBUG=false
+LOG_LEVEL=INFO
+ADMIN_EMAIL=admin@yourdomain.com.bd
+ADMIN_PASSWORD=&lt;strong-password&gt;</pre>
+
+  <h2>PostgreSQL</h2>
+  <pre>DATABASE_URL=postgresql+asyncpg://isp_user:isp_password@postgres:5432/isp_platform
+RADIUS_DB_URL=postgresql+asyncpg://radius_user:radius_pass@postgres:5432/radius
+DB_POOL_SIZE=20
+DB_MAX_OVERFLOW=40
+DB_POOL_TIMEOUT=30
+DB_POOL_RECYCLE=1800</pre>
+
+  <div class="callout callout-info"><strong>Note</strong>The <code>postgresql+asyncpg://</code> prefix is required by the SQLAlchemy async engine. Plain <code>postgresql://</code> will fail.</div>
+
+  <h2>Redis</h2>
+  <pre>REDIS_URL=redis://redis:6379/0
+REDIS_MAX_CONNECTIONS=50</pre>
+
+  <h2>Kafka</h2>
+  <pre>KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+KAFKA_TOPIC_BILLING_EVENTS=billing-events
+KAFKA_TOPIC_RADIUS_SYNC=radius-sync
+KAFKA_TOPIC_NOTIFICATIONS=notifications
+KAFKA_CONSUMER_GROUP=whisp-api</pre>
+
+  <h2>JWT</h2>
+  <pre># Generate with: openssl rand -hex 32
+JWT_SECRET_KEY=&lt;64-char-hex-string&gt;
+JWT_ALGORITHM=HS256
+JWT_EXPIRE_MINUTES=1440          # 24 h
+JWT_REFRESH_EXPIRE_DAYS=30</pre>
+
+  <h2>Encryption</h2>
+  <pre># Used to encrypt NID numbers and PPPoE passwords at rest
+# Generate with: openssl rand -base64 32 | head -c 32
+ENCRYPTION_KEY=&lt;32-char-key&gt;</pre>
+
+  <h2>bKash PGW</h2>
+  <pre>BKASH_BASE_URL=https://tokenized.sandbox.bka.sh/v1.2.0-beta
+BKASH_APP_KEY=&lt;from-bkash-dashboard&gt;
+BKASH_APP_SECRET=&lt;from-bkash-dashboard&gt;
+BKASH_USERNAME=&lt;sandbox-username&gt;
+BKASH_PASSWORD=&lt;sandbox-password&gt;
+BKASH_CALLBACK_URL=https://yourdomain.com.bd/api/payments/bkash/callback</pre>
+
+  <h2>Nagad</h2>
+  <pre>NAGAD_BASE_URL=https://sandbox.nagad.com.bd
+NAGAD_MERCHANT_ID=&lt;merchant-id&gt;
+NAGAD_MERCHANT_PHONE=01XXXXXXXXX
+NAGAD_PUBLIC_KEY=&lt;base64-nagad-public-key&gt;
+NAGAD_PRIVATE_KEY=&lt;base64-your-private-key&gt;
+NAGAD_CALLBACK_URL=https://yourdomain.com.bd/api/payments/nagad/callback</pre>
+
+  <h2>SSLCommerz</h2>
+  <pre>SSLCOMMERZ_BASE_URL=https://sandbox.sslcommerz.com
+SSLCOMMERZ_STORE_ID=&lt;store-id&gt;
+SSLCOMMERZ_STORE_PASSWD=&lt;store-password&gt;
+SSLCOMMERZ_SUCCESS_URL=https://yourdomain.com.bd/api/payments/sslcommerz/success
+SSLCOMMERZ_FAIL_URL=https://yourdomain.com.bd/api/payments/sslcommerz/fail
+SSLCOMMERZ_CANCEL_URL=https://yourdomain.com.bd/api/payments/sslcommerz/cancel
+SSLCOMMERZ_IPN_URL=https://yourdomain.com.bd/api/payments/sslcommerz/ipn</pre>
+
+  <h2>SMS Gateway (SSL Wireless)</h2>
+  <pre>SMS_GATEWAY_URL=http://sms.sslwireless.com/pushapi/dynamic/server.php
+SMS_GATEWAY_API_KEY=&lt;api-token&gt;
+SMS_GATEWAY_SENDER_ID=whISP          # max 11 chars, pre-approved
+SMS_GATEWAY_PROVIDER=ssl_wireless</pre>
+
+  <h2>FCM Push Notifications</h2>
+  <pre>FCM_SERVER_KEY=&lt;firebase-server-key&gt;</pre>
+
+  <h2>OTT Partners</h2>
+  <pre>CHORKI_BASE_URL=https://api.chorki.com
+CHORKI_API_KEY=&lt;partner-api-key&gt;
+CHORKI_PARTNER_ID=&lt;partner-id&gt;
+CHORKI_PARTNER_SECRET=&lt;partner-secret&gt;
+
+HOICHOI_BASE_URL=https://api.hoichoi.tv
+HOICHOI_API_KEY=&lt;partner-api-key&gt;
+HOICHOI_PARTNER_ID=&lt;partner-id&gt;
+HOICHOI_PARTNER_SECRET=&lt;partner-secret&gt;</pre>
+
+  <h2>RADIUS / CoA</h2>
+  <pre>RADIUS_COA_DEFAULT_PORT=3799
+RADIUS_COA_TIMEOUT=5.0</pre>
+
+  <h2>CORS</h2>
+  <pre>CORS_ORIGINS=["https://yourdomain.com.bd","https://cms.yourdomain.com.bd"]
+CORS_ALLOW_CREDENTIALS=true</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §5 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§5</span><h1>Database Setup &amp; Migrations</h1></div>
+
+  <h2>Schema Overview</h2>
+  <pre>franchisees
+    ├── franchisee_users        (staff login)
+    ├── nas_devices             (MikroTik / FreeRADIUS gateways)
+    └── subscribers
+            ├── payment_transactions
+            ├── notifications
+            ├── ott_entitlements
+            ├── support_tickets
+            └── coa_commands    (audit trail of CoA packets)
+plans                           (platform-wide or franchisee-scoped)
+audit_logs                      (immutable event journal)
+usage_stats (TimescaleDB)       (hypertable, indexed by time)</pre>
+
+  <h2>Running Migrations</h2>
+  <pre>alembic upgrade head           # apply all pending
+alembic current                # show current revision
+alembic history --verbose      # full history
+alembic downgrade -1           # rollback one step</pre>
+
+  <h2>Creating a New Migration</h2>
+  <pre>alembic revision --autogenerate -m "add_field_xyz"
+# Edit the generated file in alembic/versions/ to verify
+alembic upgrade head</pre>
+
+  <div class="callout callout-warn"><strong>TimescaleDB Hypertable</strong>The <code>usage_stats</code> table must be converted to a hypertable after the first migration. Run once manually or in migration <code>0002</code>:</div>
+  <pre>SELECT create_hypertable('usage_stats', 'time', if_not_exists =&gt; TRUE);
+SELECT add_retention_policy('usage_stats', INTERVAL '90 days');
+SELECT add_compression_policy('usage_stats', INTERVAL '7 days');</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §6 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§6</span><h1>Services Reference</h1></div>
+
+  <h2>6.1 API Service (<code>services/api</code>)</h2>
+  <p>Entry point: <code>app/main.py</code> · Start: <code>uvicorn app.main:app --host 0.0.0.0 --port 8000</code></p>
+  <p><strong>Startup sequence:</strong> connect PostgreSQL pool → connect Redis → log <code>startup_complete</code>.</p>
+  <table>
+    <tr><th>Dependency</th><th>Purpose</th></tr>
+    <tr><td>fastapi + uvicorn</td><td>HTTP framework</td></tr>
+    <tr><td>sqlalchemy[asyncio] + asyncpg</td><td>Async ORM + DB driver</td></tr>
+    <tr><td>passlib[bcrypt]</td><td>Password hashing</td></tr>
+    <tr><td>python-jose[cryptography]</td><td>JWT tokens</td></tr>
+    <tr><td>httpx</td><td>Async HTTP calls to gateways</td></tr>
+    <tr><td>redis[asyncio]</td><td>Token blacklist + cache</td></tr>
+    <tr><td>aiokafka</td><td>Kafka producer for events</td></tr>
+    <tr><td>structlog</td><td>Structured JSON logging</td></tr>
+  </table>
+
+  <h2>6.2 Billing Service (<code>services/billing</code>)</h2>
+  <p>Entry point: <code>app/__main__.py</code> · Start: <code>python -m app</code></p>
+  <table>
+    <tr><th>Job</th><th>Schedule</th><th>Action</th></tr>
+    <tr><td>check_expiry_warnings</td><td>Every hour</td><td>SMS at T‑24h and T‑2h before plan expiry</td></tr>
+    <tr><td>enforce_expiry</td><td>Every 5 min</td><td>Auto-suspend expired subscribers</td></tr>
+    <tr><td>process_auto_debit</td><td>Every 15 min</td><td>Execute bKash recurring debit</td></tr>
+    <tr><td>reconcile_revenue</td><td>Daily 02:00 BDT</td><td>Monthly revenue report per franchisee</td></tr>
+    <tr><td>check_agreement_health</td><td>Daily 03:00 BDT</td><td>Validate bKash agreement status</td></tr>
+  </table>
+  <div class="callout callout-info"><strong>Timezone</strong>All schedules are Asia/Dhaka (UTC+6).</div>
+
+  <h2>6.3 CoA Engine (<code>services/coa-engine</code>)</h2>
+  <p>Sends RFC 5176 Change-of-Authorization packets over UDP to MikroTik routers.</p>
+  <table>
+    <tr><th>Packet Type</th><th>Code</th><th>Use</th></tr>
+    <tr><td>Disconnect-Request</td><td>40</td><td>Force PPPoE session termination</td></tr>
+    <tr><td>CoA-Request</td><td>43</td><td>Apply rate-limit (speed throttling)</td></tr>
+  </table>
+  <p>MikroTik VSA (vendor ID 14988) is used for rate-limit: <code>Mikrotik-Rate-Limit = "10240k/5120k"</code>.</p>
+  <p><strong>Triggered by:</strong> subscriber suspension · plan expiry · quota exceeded · payment completion.</p>
+
+  <h2>6.4 Notification Service (<code>services/notification</code>)</h2>
+  <p>Runs two concurrent async loops:</p>
+  <ul>
+    <li><strong>DB drain loop</strong> (every 5 s): polls <code>notifications</code> table for pending records, sends via SMS/push, updates status.</li>
+    <li><strong>Kafka consumer loop</strong>: consumes real-time events, inserts notification record, sends immediately.</li>
+  </ul>
+  <p>Rate limiting: token-bucket algorithm, default 10 SMS/second.</p>
+
+  <h2>6.5 RADIUS Consumer (<code>services/radius-consumer</code>)</h2>
+  <p>Kafka topic → TimescaleDB usage ingest.</p>
+  <table>
+    <tr><th>Event</th><th>Action</th></tr>
+    <tr><td>Acct-Status-Type = Start</td><td>Insert session, mark subscriber online</td></tr>
+    <tr><td>Acct-Status-Type = Interim-Update</td><td>Update quota_used_bytes, check quota limit</td></tr>
+    <tr><td>Acct-Status-Type = Stop</td><td>Mark session ended, write final usage to TimescaleDB</td></tr>
+  </table>
+  <p>When <code>quota_used_bytes &gt;= plan.quota_gb × 1 073 741 824</code>, a CoA rate-limit request is published.</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §7 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§7</span><h1>API Endpoints Reference</h1></div>
+  <p>All endpoints are prefixed <code>/api/</code> behind Nginx. Direct base URL: <code>http://localhost:8000</code>.</p>
+  <p>Include token in every request: <code>Authorization: Bearer &lt;access_token&gt;</code></p>
+
+  <h2>Authentication</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>POST</td><td>/auth/login</td><td>Returns access + refresh tokens</td></tr>
+    <tr><td>POST</td><td>/auth/refresh</td><td>Exchange refresh → new access token</td></tr>
+    <tr><td>POST</td><td>/auth/logout</td><td>Blacklist current token in Redis</td></tr>
+    <tr><td>POST</td><td>/auth/register/subscriber</td><td>Subscriber self-registration</td></tr>
+    <tr><td>GET</td><td>/auth/me</td><td>Current user info</td></tr>
+  </table>
+  <pre>curl -X POST http://localhost:8000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"pass","actor_type":"admin"}'
+
+# Response: {"access_token":"eyJ...","refresh_token":"eyJ...","expires_in":86400}</pre>
+
+  <h2>Subscribers</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/subscribers</td><td>List (role-scoped to franchisee)</td></tr>
+    <tr><td>POST</td><td>/subscribers</td><td>Create + RADIUS sync</td></tr>
+    <tr><td>GET</td><td>/subscribers/{id}</td><td>Detail + active session info</td></tr>
+    <tr><td>PATCH</td><td>/subscribers/{id}</td><td>Update profile / plan</td></tr>
+    <tr><td>DELETE</td><td>/subscribers/{id}</td><td>Soft delete + RADIUS cleanup</td></tr>
+    <tr><td>POST</td><td>/subscribers/{id}/suspend</td><td>Suspend + CoA disconnect</td></tr>
+    <tr><td>POST</td><td>/subscribers/{id}/reactivate</td><td>Reactivate + RADIUS resync</td></tr>
+    <tr><td>POST</td><td>/subscribers/{id}/reset-password</td><td>Regenerate PPPoE + portal passwords</td></tr>
+    <tr><td>GET</td><td>/subscribers/{id}/sessions</td><td>Active PPPoE sessions from radacct</td></tr>
+  </table>
+
+  <h2>Payments</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/payments</td><td>List transactions</td></tr>
+    <tr><td>GET</td><td>/payments/{id}</td><td>Transaction detail</td></tr>
+    <tr><td>POST</td><td>/payments/bkash/initiate</td><td>Returns bKash redirect URL</td></tr>
+    <tr><td>POST</td><td>/payments/bkash/callback</td><td>IPN – executes payment + subscription</td></tr>
+    <tr><td>POST</td><td>/payments/bkash/agreement/create</td><td>Initiate bKash auto-debit agreement</td></tr>
+    <tr><td>POST</td><td>/payments/bkash/agreement/callback</td><td>Store agreementID</td></tr>
+    <tr><td>POST</td><td>/payments/nagad/initiate</td><td>Initiate Nagad payment</td></tr>
+    <tr><td>POST</td><td>/payments/nagad/callback</td><td>Nagad IPN callback</td></tr>
+    <tr><td>POST</td><td>/payments/sslcommerz/initiate</td><td>SSLCommerz checkout</td></tr>
+    <tr><td>POST</td><td>/payments/sslcommerz/success</td><td>Success redirect handler</td></tr>
+    <tr><td>POST</td><td>/payments/sslcommerz/ipn</td><td>SSLCommerz IPN (server-to-server)</td></tr>
+    <tr><td>POST</td><td>/payments/manual</td><td>Record manual payment (admin/franchisee)</td></tr>
+  </table>
+
+  <h2>Plans</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/plans</td><td>List (public + franchisee-scoped)</td></tr>
+    <tr><td>POST</td><td>/plans</td><td>Create + sync to FreeRADIUS radgroupreply</td></tr>
+    <tr><td>GET</td><td>/plans/{id}</td><td>Plan detail</td></tr>
+    <tr><td>PATCH</td><td>/plans/{id}</td><td>Update + re-sync if speeds changed</td></tr>
+    <tr><td>DELETE</td><td>/plans/{id}</td><td>Deactivate (blocked if active subscribers)</td></tr>
+  </table>
+
+  <h2>Franchisees (admin only)</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET / POST</td><td>/franchisees</td><td>List / Create</td></tr>
+    <tr><td>GET / PATCH</td><td>/franchisees/{id}</td><td>Detail / Update</td></tr>
+    <tr><td>POST</td><td>/franchisees/{id}/approve</td><td>Approve pending franchisee</td></tr>
+    <tr><td>POST</td><td>/franchisees/{id}/suspend</td><td>Suspend franchisee</td></tr>
+    <tr><td>POST</td><td>/franchisees/{id}/rotate-secret</td><td>Rotate RADIUS secret + update all NAS</td></tr>
+    <tr><td>POST</td><td>/franchisees/{id}/credit</td><td>Add balance credit</td></tr>
+    <tr><td>GET</td><td>/franchisees/{id}/mikrotik-config</td><td>Generate RouterOS script (.rsc)</td></tr>
+  </table>
+
+  <h2>Usage Analytics</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/usage/franchisee/overview</td><td>Active sessions, bandwidth, revenue</td></tr>
+    <tr><td>GET</td><td>/usage/franchisee/chart?period=24h</td><td>Time-series (6h|24h|72h|7d)</td></tr>
+    <tr><td>GET</td><td>/usage/franchisee/top-consumers</td><td>Top 10 by bytes this month</td></tr>
+    <tr><td>GET</td><td>/usage/franchisee/sessions</td><td>Live PPPoE session list</td></tr>
+    <tr><td>GET</td><td>/usage/subscriber/{id}</td><td>Per-subscriber quota % + 7-day history</td></tr>
+  </table>
+
+  <h2>OTT / Support / Admin</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+    <tr><td>GET</td><td>/ott/entitlements</td><td>List subscriber OTT entitlements</td></tr>
+    <tr><td>GET</td><td>/ott/launch/{partner}</td><td>Generate SSO URL (Chorki / Hoichoi)</td></tr>
+    <tr><td>POST</td><td>/ott/provision</td><td>Manually provision entitlement</td></tr>
+    <tr><td>POST</td><td>/ott/revoke/{id}</td><td>Revoke entitlement</td></tr>
+    <tr><td>GET / POST</td><td>/tickets</td><td>List / Create support tickets</td></tr>
+    <tr><td>PATCH</td><td>/tickets/{id}</td><td>Update status / priority</td></tr>
+    <tr><td>POST</td><td>/tickets/{id}/reply</td><td>Add message to thread</td></tr>
+    <tr><td>GET</td><td>/admin/stats</td><td>Platform-wide KPIs</td></tr>
+    <tr><td>GET</td><td>/admin/audit</td><td>Audit log</td></tr>
+    <tr><td>POST</td><td>/admin/broadcast</td><td>Mass SMS/push notification</td></tr>
+    <tr><td>GET</td><td>/health</td><td>Service health check</td></tr>
+    <tr><td>GET</td><td>/metrics</td><td>Prometheus text-format metrics</td></tr>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §8 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§8</span><h1>Payment Gateway Integration</h1></div>
+
+  <h2>8.1 bKash PGW</h2>
+  <p><strong>Flow:</strong></p>
+  <ol>
+    <li><code>POST /payments/bkash/initiate</code> → API calls bKash <code>/tokenized/checkout/create</code> → returns <code>bkashURL</code> (redirect user here)</li>
+    <li>User completes payment on bKash app</li>
+    <li>bKash calls <code>POST /payments/bkash/callback</code> (IPN) → API calls <code>/tokenized/checkout/execute</code> → if <code>transactionStatus = "Completed"</code>: run <code>_complete_subscription()</code></li>
+  </ol>
+  <p><strong>Sandbox test credentials:</strong> customer wallet <code>01877722345</code>, PIN <code>12121</code>.</p>
+  <p><strong>Auto-debit:</strong> initiate agreement via <code>/payments/bkash/agreement/create</code>, store returned <code>agreementID</code> in <code>subscribers.bkash_agreement_id</code>. Billing engine charges automatically on renewal.</p>
+
+  <h2>8.2 Nagad</h2>
+  <p>Nagad uses RSA encryption. Generate a key pair:</p>
+  <pre>openssl genrsa -out nagad_private.pem 2048
+openssl rsa -in nagad_private.pem -pubout -out nagad_public.pem
+# Base64-encode both for .env
+base64 -w 0 nagad_private.pem &gt; nagad_private.b64</pre>
+  <p>Share your public key with Nagad. Put their public key in <code>NAGAD_PUBLIC_KEY</code> and your private key in <code>NAGAD_PRIVATE_KEY</code> (both base64-encoded).</p>
+
+  <h2>8.3 SSLCommerz</h2>
+  <p>SSLCommerz handles Visa/Mastercard, bKash, Nagad, and Rocket in a single checkout page.</p>
+  <div class="callout callout-danger"><strong>Critical – IPN Validation</strong>SSLCommerz sends a POST to <code>SSLCOMMERZ_IPN_URL</code>. Always verify the <code>val_id</code> against the SSLCommerz validation endpoint before crediting the subscriber. Never skip this in production.</div>
+
+  <h2>Post-payment flow – <code>_complete_subscription()</code></h2>
+  <p>Called by all gateway callbacks on success:</p>
+  <pre>1. subscriber.plan_id = plan_id
+2. subscriber.quota_used_bytes = 0
+3. subscriber.plan_expires_at = now + timedelta(days=plan.validity_days)
+4. subscriber.status = "active"
+5. await radius_sync(subscriber)       # UPDATE radcheck + radusergroup
+6. await coa_reconnect(subscriber)     # CoA-Request or Disconnect+reconnect
+7. await provision_ott(subscriber)     # Chorki / Hoichoi if plan includes them
+8. await queue_sms(subscriber, "activation")</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §9 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§9</span><h1>SMS Gateway (SSL Wireless)</h1></div>
+
+  <p>SSL Wireless covers all four Bangladesh mobile operators: Grameenphone, Robi/Airtel, Banglalink, Teletalk.</p>
+
+  <h2>API Parameters</h2>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>api_token</td><td>Your API token from SSL Wireless dashboard</td></tr>
+    <tr><td>sid</td><td>Sender ID (pre-approved, max 11 chars)</td></tr>
+    <tr><td>msisdn</td><td>Recipient in <code>+8801XXXXXXXXX</code> format</td></tr>
+    <tr><td>sms</td><td>Message body (Unicode / Bengali supported)</td></tr>
+    <tr><td>csmsid</td><td>Your unique message reference ID</td></tr>
+  </table>
+
+  <h2>Phone Number Normalisation</h2>
+  <table>
+    <tr><th>Input</th><th>Normalised</th></tr>
+    <tr><td>01712345678</td><td>+8801712345678</td></tr>
+    <tr><td>1712345678</td><td>+8801712345678</td></tr>
+    <tr><td>8801712345678</td><td>+8801712345678</td></tr>
+    <tr><td>+8801712345678</td><td>+8801712345678</td></tr>
+  </table>
+
+  <h2>Test the Gateway Directly</h2>
+  <pre>curl -X POST "http://sms.sslwireless.com/pushapi/dynamic/server.php" \
+  -d "api_token=$SMS_GATEWAY_API_KEY" \
+  -d "sid=$SMS_GATEWAY_SENDER_ID" \
+  -d "msisdn=+8801712345678" \
+  -d "sms=Test message" \
+  -d "csmsid=test001"</pre>
+
+  <h2>Recommended Templates</h2>
+  <table>
+    <tr><th>Event</th><th>Template (Bengali)</th></tr>
+    <tr><td>Activation</td><td>আপনার whISP সংযোগ সক্রিয়। প্যাকেজ: {plan}, মেয়াদ: {expiry}</td></tr>
+    <tr><td>Expiry T-24h</td><td>আপনার ইন্টারনেট {expiry} তারিখে শেষ হবে। নবায়ন করুন: {url}</td></tr>
+    <tr><td>Payment OK</td><td>পেমেন্ট গ্রহণ হয়েছে ৳{amount}। ধন্যবাদ।</td></tr>
+    <tr><td>Suspension</td><td>আপনার সংযোগ সাময়িকভাবে স্থগিত করা হয়েছে।</td></tr>
+  </table>
+
+  <div class="callout callout-info"><strong>Character Limits</strong>Standard SMS = 160 chars. Bengali Unicode = 70 chars per segment. Keep automated messages under 70 chars to avoid multi-part charges.</div>
+  <div class="callout callout-warn"><strong>Sender ID Approval</strong>Contact SSL Wireless to pre-approve your sender ID. Masking (showing a name instead of a number) requires BTRC registration. Allow 3–5 business days.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §10 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§10</span><h1>RADIUS / FreeRADIUS Integration</h1></div>
+
+  <h2>Shared Database Schema</h2>
+  <table>
+    <tr><th>Table</th><th>Purpose</th></tr>
+    <tr><td>radcheck</td><td>PPPoE credentials (<code>Cleartext-Password</code>)</td></tr>
+    <tr><td>radusergroup</td><td>Maps username → plan group</td></tr>
+    <tr><td>radgroupreply</td><td>Speed limits per group (set when creating a Plan)</td></tr>
+    <tr><td>radacct</td><td>Live + historical accounting sessions (written by FreeRADIUS)</td></tr>
+  </table>
+
+  <h2>RADIUS Sync – SQL</h2>
+  <pre>-- 1. Upsert credentials
+INSERT INTO radcheck (username, attribute, op, value)
+VALUES ($1, 'Cleartext-Password', ':=', $2)
+ON CONFLICT (username, attribute) DO UPDATE SET value = EXCLUDED.value;
+
+-- 2. Set group (plan)
+DELETE FROM radusergroup WHERE username = $1;
+INSERT INTO radusergroup (username, groupname, priority) VALUES ($1, $2, 1);</pre>
+
+  <h2>FreeRADIUS Configuration</h2>
+  <pre># sql.conf
+server   = "postgres-host"
+port     = 5432
+login    = "radius_user"
+password = "radius_pass"
+radius_db = "radius"</pre>
+  <pre># sites-enabled/default
+authorize  { sql }
+authenticate { Auth-Type PAP { pap } }
+accounting  { sql }</pre>
+
+  <h2>MikroTik – Enable CoA</h2>
+  <pre># RouterOS terminal
+/radius incoming set accept=yes port=3799
+/radius add address=&lt;api-server-ip&gt; secret=&lt;nas_devices.secret&gt; service=ppp</pre>
+
+  <div class="callout callout-danger"><strong>Secret Match</strong>The <code>secret</code> field in the <code>nas_devices</code> database table must exactly match the RADIUS secret configured on the MikroTik router. A mismatch causes all CoA packets to be silently rejected.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §11 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§11</span><h1>OTT Partner Integration</h1></div>
+
+  <h2>Chorki – Provisioning</h2>
+  <pre>POST {CHORKI_BASE_URL}/partner/provision
+Authorization: Bearer {CHORKI_API_KEY}
+{
+  "partner_id": "{CHORKI_PARTNER_ID}",
+  "subscriber_id": "&lt;whisp-subscriber-uuid&gt;",
+  "plan_id": "&lt;chorki-plan-id&gt;",
+  "phone": "+8801XXXXXXXXX"
+}
+# Response stores partner_user_id + partner_subscription_id</pre>
+
+  <h2>Chorki – SSO Launch</h2>
+  <pre>GET {CHORKI_BASE_URL}/partner/sso-token?subscriber_id=...
+# Returns: { "launch_url": "https://chorki.com/watch?token=..." }</pre>
+
+  <h2>Hoichoi – Provisioning</h2>
+  <pre>POST {HOICHOI_BASE_URL}/api/partner/subscribe
+{
+  "partner_id": "{HOICHOI_PARTNER_ID}",
+  "msisdn": "+8801XXXXXXXXX",
+  "package": "monthly"
+}</pre>
+
+  <div class="callout callout-success"><strong>Graceful Degradation</strong>If OTT API keys are not configured, the platform returns a placeholder URL and logs a warning — it does <em>not</em> fail the payment flow. This allows testing without live OTT credentials.</div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §12 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§12</span><h1>Frontend Setup</h1></div>
+
+  <h2>12.1 Franchisee CMS (<code>frontend/franchisee-cms</code>) — Port 3000</h2>
+  <p>Dark-theme management dashboard for franchisee staff. Sidebar navigation, all pages fully implemented.</p>
+  <pre>cd frontend/franchisee-cms
+npm install
+npm run dev      # http://localhost:3000</pre>
+
+  <table>
+    <tr><th>Page</th><th>Route</th><th>Key Features</th></tr>
+    <tr><td>Login</td><td>/login</td><td>Email + password → JWT → dashboard</td></tr>
+    <tr><td>Dashboard</td><td>/dashboard</td><td>Stat cards, 24h bar chart (Recharts), PPPoE sessions, top consumers. Auto-refreshes every 30 s</td></tr>
+    <tr><td>Subscribers</td><td>/subscribers</td><td>Searchable table, quota progress bars, Add/Suspend/Reactivate/Reset PWD</td></tr>
+    <tr><td>Plans</td><td>/plans</td><td>Card grid, Create/Edit modal (speeds, throttle, cap, OTT checkboxes), Deactivate</td></tr>
+    <tr><td>Usage</td><td>/usage</td><td>Area chart (6h/24h/72h/7d), top-10 ranked list, live sessions table</td></tr>
+    <tr><td>Billing</td><td>/billing</td><td>Revenue summary cards, date-range filter, transactions table with gateway colour badges</td></tr>
+    <tr><td>Devices</td><td>/devices</td><td>NAS table, Register modal, Test CoA (shows latency), Download RouterOS config (.rsc)</td></tr>
+    <tr><td>Tickets</td><td>/tickets</td><td>Ticket list with priority/status badges, threaded conversation modal, reply form</td></tr>
+  </table>
+
+  <p>Both hooks are pre-built:</p>
+  <ul>
+    <li><code>useAuth()</code> – JWT token storage, login/logout, auto-refresh</li>
+    <li><code>useApi()</code> – Authenticated API calls with error handling and fallback</li>
+  </ul>
+
+  <h2>12.2 User Portal (<code>frontend/user-portal</code>) — Port 3001</h2>
+  <p>Mobile-first Bengali-language self-service portal. Bottom tab navigation.</p>
+  <pre>cd frontend/user-portal
+npm install
+npm run dev      # http://localhost:3001</pre>
+
+  <table>
+    <tr><th>Page</th><th>Route</th><th>Key Features</th></tr>
+    <tr><td>Login</td><td>/login</td><td>PPPoE credentials form</td></tr>
+    <tr><td>Home</td><td>/home</td><td>Animated SVG quota ring (colour: green → orange → red), remaining GB in Bengali digits, expiry countdown warning ≤3 days</td></tr>
+    <tr><td>Payment</td><td>/payment</td><td>Plan selector (highlights current), bKash/Nagad/Card method picker, gateway redirect, payment history table</td></tr>
+    <tr><td>OTT</td><td>/ott</td><td>2×2 card grid (Chorki/Hoichoi/Binge/Toffee), active → Watch Now, inactive → Upgrade</td></tr>
+    <tr><td>Support</td><td>/support</td><td>4-category quick-tap grid, ticket form, ticket list, chat-bubble conversation thread with reply input</td></tr>
+  </table>
+
+  <h2>Vite Proxy (dev only)</h2>
+  <p>Both portals proxy <code>/api</code> to the backend automatically in development:</p>
+  <pre>// vite.config.js
+proxy: { '/api': { target: 'http://localhost:8000', changeOrigin: true } }</pre>
+  <p>In production, Nginx handles this routing (see §14).</p>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §13 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§13</span><h1>Running Tests</h1></div>
+
+  <h2>Install Test Dependencies</h2>
+  <pre>cd services/api
+pip install -r requirements.txt -r requirements-test.txt</pre>
+
+  <h2>Run Tests</h2>
+  <pre>pytest -v                                      # all tests
+pytest tests/test_auth.py -v                   # specific file
+pytest tests/test_sms.py -v
+pytest --cov=app --cov-report=term-missing     # with coverage</pre>
+
+  <h2>Test Architecture</h2>
+  <ul>
+    <li>Uses <strong>SQLite in-memory</strong> (aiosqlite) — no live PostgreSQL required</li>
+    <li>Each test gets a <strong>transactional session</strong> rolled back on teardown (fast, isolated)</li>
+    <li>SMS and HTTP calls are <strong>mocked</strong> with <code>unittest.mock</code> — no real gateway calls</li>
+    <li><code>conftest.py</code> overrides the <code>get_db</code> FastAPI dependency automatically</li>
+  </ul>
+
+  <h2>Adding Tests for New Routers</h2>
+  <pre>import pytest
+from httpx import AsyncClient
+
+@pytest.mark.asyncio
+async def test_my_endpoint(client: AsyncClient):
+    resp = await client.get(
+        "/my-endpoint",
+        headers={"Authorization": "Bearer &lt;test-token&gt;"}
+    )
+    assert resp.status_code == 200</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §14 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§14</span><h1>Production Deployment (Kubernetes)</h1></div>
+
+  <h2>Prerequisites</h2>
+  <pre>kubectl version    # >= 1.28
+helm version       # >= 3.12
+# Running PostgreSQL 15 + TimescaleDB (RDS or self-managed)
+# Running Redis cluster
+# Running Kafka cluster (MSK or self-managed)</pre>
+
+  <h2>Step 1 – Namespace and Secrets</h2>
+  <pre>kubectl create namespace whisp
+kubectl create secret generic whisp-env \
+  --namespace whisp \
+  --from-env-file=.env</pre>
+
+  <h2>Step 2 – Run Migrations</h2>
+  <pre>kubectl apply -f - &lt;&lt;EOF
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: whisp-migrate
+  namespace: whisp
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: migrate
+        image: &lt;registry&gt;/whisp-api:latest
+        command: ["alembic", "upgrade", "head"]
+        envFrom:
+        - secretRef:
+            name: whisp-env
+EOF
+kubectl wait --for=condition=complete job/whisp-migrate -n whisp --timeout=120s</pre>
+
+  <h2>Step 3 – Apply Manifests</h2>
+  <pre>kubectl apply -f infrastructure/kubernetes/deployment.yaml</pre>
+  <p>This creates Deployments + Services for all 5 services, and an HPA for the API (2 → 10 replicas at 70% CPU).</p>
+
+  <h2>Step 4 – Ingress</h2>
+  <pre>kubectl apply -f - &lt;&lt;EOF
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: whisp-ingress
+  namespace: whisp
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+spec:
+  tls:
+  - hosts: [yourdomain.com.bd]
+    secretName: whisp-tls
+  rules:
+  - host: yourdomain.com.bd
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service: { name: whisp-api, port: { number: 8000 } }
+      - path: /cms
+        pathType: Prefix
+        backend:
+          service: { name: whisp-franchisee-cms, port: { number: 3000 } }
+      - path: /
+        pathType: Prefix
+        backend:
+          service: { name: whisp-user-portal, port: { number: 3001 } }
+EOF</pre>
+
+  <h2>Step 5 – Verify</h2>
+  <pre>kubectl get pods -n whisp
+kubectl logs -n whisp deployment/whisp-api --tail=50
+curl https://yourdomain.com.bd/api/health</pre>
+
+  <h2>Build &amp; Push Images</h2>
+  <pre>docker build -t &lt;registry&gt;/whisp-api:latest services/api/ &amp;&amp; docker push &lt;registry&gt;/whisp-api:latest
+docker build -t &lt;registry&gt;/whisp-billing:latest services/billing/ &amp;&amp; docker push &lt;registry&gt;/whisp-billing:latest
+# Repeat for coa-engine, notification, radius-consumer</pre>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ §15 ══ -->
+<div class="section page-break">
+  <div class="section-header"><span class="section-num">§15</span><h1>Troubleshooting</h1></div>
+
+  <h2>database_connection_failed on startup</h2>
+  <pre>docker compose exec api python -c \
+  "import asyncpg, asyncio; asyncio.run(asyncpg.connect('$DATABASE_URL'))"</pre>
+  <p>Common causes: wrong hostname (<code>postgres</code> inside Docker, <code>localhost</code> outside) · missing <code>postgresql+asyncpg://</code> prefix · TimescaleDB extension not installed.</p>
+
+  <h2>redis_unavailable_cannot_blacklist_token</h2>
+  <pre>docker compose exec redis redis-cli ping   # should return PONG</pre>
+  <p>Non-fatal in dev but <strong>must be resolved in production</strong> — tokens remain valid after logout without Redis.</p>
+
+  <h2>SMS not delivered</h2>
+  <ol>
+    <li>Check <code>notifications</code> table: <code>SELECT * FROM notifications WHERE status='failed' ORDER BY created_at DESC LIMIT 10;</code></li>
+    <li>Check the <code>error</code> column for the raw gateway response</li>
+    <li>Verify <code>SMS_GATEWAY_API_KEY</code> and <code>SMS_GATEWAY_SENDER_ID</code> are set</li>
+    <li>Confirm sender ID is approved by SSL Wireless for your account</li>
+    <li>Test the API directly (see §9)</li>
+  </ol>
+
+  <h2>CoA disconnect not working</h2>
+  <ol>
+    <li>Verify MikroTik: <code>/radius incoming print</code> — confirm <code>accept=yes</code></li>
+    <li>Check UDP port 3799 is open: <code>nc -u &lt;nas-ip&gt; 3799</code></li>
+    <li>Check <code>coa_commands</code> table for <code>success=false</code> + <code>error</code> column</li>
+    <li>Confirm <code>nas_devices.secret</code> matches the RouterOS RADIUS secret exactly</li>
+  </ol>
+
+  <h2>bKash callback not receiving</h2>
+  <p>bKash requires <code>BKASH_CALLBACK_URL</code> to be publicly reachable over HTTPS. For local dev use a tunnel:</p>
+  <pre>ngrok http 8000
+# Set BKASH_CALLBACK_URL=https://&lt;ngrok-subdomain&gt;.ngrok.io/payments/bkash/callback</pre>
+
+  <h2>alembic.ini not found</h2>
+  <p>Always run Alembic from the repo root, or pass <code>-c</code>:</p>
+  <pre>alembic -c /home/user/whISP/alembic.ini upgrade head</pre>
+
+  <h2>Subscriber shows online but has no internet</h2>
+  <p>RADIUS sync succeeded but CoA was not sent or was ignored. Check <code>coa_commands</code> table. Manually trigger:</p>
+  <pre>docker compose exec coa-engine python -c "
+from app.coa import send_disconnect
+import asyncio
+asyncio.run(send_disconnect('&lt;nas-ip&gt;', '&lt;secret&gt;', '&lt;username&gt;'))
+"</pre>
+
+  <h2>Kafka consumer lag growing</h2>
+  <pre>docker compose exec kafka kafka-consumer-groups.sh \
+  --bootstrap-server localhost:9092 \
+  --group whisp-api \
+  --describe</pre>
+  <p>If LAG is growing check <code>radius-consumer</code> and <code>notification</code> service logs for errors.</p>
+</div>
+
+</div><!-- /content -->
+</body>
+</html>
