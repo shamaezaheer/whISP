@@ -41,6 +41,7 @@ FRANCHISEES = [
     {
         "name": "Dhaka Net Solutions",
         "slug": "dhaka-net",
+        "code": "DHK",
         "contact_email": "admin@dhakanet.bd",
         "contact_phone": "01711000001",
         "address": "House 12, Road 5, Dhanmondi, Dhaka",
@@ -56,6 +57,7 @@ FRANCHISEES = [
     {
         "name": "Chittagong Fiber Link",
         "slug": "ctg-fiber",
+        "code": "CTG",
         "contact_email": "admin@ctgfiber.bd",
         "contact_phone": "01811000002",
         "address": "Agrabad C/A, Chittagong",
@@ -71,6 +73,7 @@ FRANCHISEES = [
     {
         "name": "Sylhet Connect",
         "slug": "sylhet-connect",
+        "code": "SYL",
         "contact_email": "admin@sylhetconnect.bd",
         "contact_phone": "01911000003",
         "address": "Zindabazar, Sylhet",

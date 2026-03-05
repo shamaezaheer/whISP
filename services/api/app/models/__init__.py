@@ -64,6 +64,7 @@ class Franchisee(UUIDMixin, TimestampMixin, Base):
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     slug: Mapped[str] = mapped_column(String(100), nullable=False, unique=True)
+    code: Mapped[Optional[str]] = mapped_column(String(20))
     contact_email: Mapped[str] = mapped_column(String(255), nullable=False)
     contact_phone: Mapped[Optional[str]] = mapped_column(String(20))
     address: Mapped[Optional[str]] = mapped_column(Text)
