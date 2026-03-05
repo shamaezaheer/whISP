@@ -31,7 +31,7 @@ from app.models import (
     Subscriber,
 )
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
 
 # ---------------------------------------------------------------------------
 # Seed data
@@ -182,7 +182,7 @@ def _rand_username(first: str, last: str, n: int) -> str:
 
 
 def _rand_password(length: int = 10) -> str:
-    return secrets.token_urlsafe(length)
+    return secrets.token_urlsafe(length)[:72]
 
 
 # ---------------------------------------------------------------------------
