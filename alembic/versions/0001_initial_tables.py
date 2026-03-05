@@ -21,50 +21,93 @@ def upgrade() -> None:
     op.execute("CREATE EXTENSION IF NOT EXISTS citext")
 
     # ------------------------------------------------------------------
-    # Enum types
+    # Enum types  (DO block swallows duplicate_object if already created
+    #              by docker-entrypoint-initdb.d init scripts)
     # ------------------------------------------------------------------
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS franchisee_status AS ENUM ('pending','active','suspended','terminated')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS franchisee_user_role AS ENUM ('owner','manager','support')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS subscriber_status AS ENUM ('active','suspended','expired','pending','terminated')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS payment_gateway AS ENUM ('bkash','nagad','sslcommerz','manual')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS payment_status AS ENUM ('initiated','pending','completed','failed','cancelled','refunded')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS notification_channel AS ENUM ('sms','email','push','in_app')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS notification_status AS ENUM ('pending','sent','failed')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS coa_command_type AS ENUM ('disconnect','coa','rate_limit')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS ticket_category AS ENUM ('billing','connectivity','speed','installation','other')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS ticket_priority AS ENUM ('low','medium','high','critical')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS ticket_status AS ENUM ('open','in_progress','pending_customer','resolved','closed')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS ott_partner AS ENUM ('chorki','hoichoi')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS ott_status AS ENUM ('active','revoked','expired')"
-    )
-    op.execute(
-        "CREATE TYPE IF NOT EXISTS actor_type AS ENUM ('admin','franchisee','subscriber','system')"
-    )
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE franchisee_status AS ENUM ('pending','active','suspended','terminated');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE franchisee_user_role AS ENUM ('owner','manager','support');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE subscriber_status AS ENUM ('active','suspended','expired','pending','terminated');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE payment_gateway AS ENUM ('bkash','nagad','sslcommerz','manual');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE payment_status AS ENUM ('initiated','pending','completed','failed','cancelled','refunded');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE notification_channel AS ENUM ('sms','email','push','in_app');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE notification_status AS ENUM ('pending','sent','failed');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE coa_command_type AS ENUM ('disconnect','coa','rate_limit');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE ticket_category AS ENUM ('billing','connectivity','speed','installation','other');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE ticket_priority AS ENUM ('low','medium','high','critical');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE ticket_status AS ENUM ('open','in_progress','pending_customer','resolved','closed');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE ott_partner AS ENUM ('chorki','hoichoi');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE ott_status AS ENUM ('active','revoked','expired');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
+    op.execute("""
+        DO $$ BEGIN
+            CREATE TYPE actor_type AS ENUM ('admin','franchisee','subscriber','system');
+        EXCEPTION WHEN duplicate_object THEN NULL;
+        END $$;
+    """)
 
     # ------------------------------------------------------------------
     # updated_at trigger function
