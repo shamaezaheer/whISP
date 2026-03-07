@@ -19,7 +19,6 @@ import os
 # Ensure /app is on the path when run as `python scripts/seed_dev.py`
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from passlib.context import CryptContext
 from sqlalchemy import select, text
 
 from app.database import AsyncSessionLocal, async_engine
@@ -30,16 +29,7 @@ from app.models import (
     Plan,
     Subscriber,
 )
-
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
-def _hash(password: str) -> str:
-    """Slice to 72 chars before hashing.
-    token_urlsafe is ASCII-only so 1 char == 1 byte — no UTF-8 truncation risk.
-    Pass a str, not bytes: CryptContext.hash() expects str and will
-    re-encode bytes as their repr (b'...'), making the payload longer."""
-    return pwd_ctx.hash(password[:72])
+from app.services.crypto import hash_password as _hash
 
 # ---------------------------------------------------------------------------
 # Seed data

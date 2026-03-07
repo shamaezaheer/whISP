@@ -24,8 +24,13 @@ _pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
-    """Return a bcrypt-hashed representation of *password*."""
-    return _pwd_context.hash(password)
+    """Return a bcrypt-hashed representation of *password*.
+
+    bcrypt silently truncates at 72 bytes in older versions and raises
+    ValueError in bcrypt >= 4.0.  Truncate here so callers never need
+    to think about it.
+    """
+    return _pwd_context.hash(password[:72])
 
 
 def verify_password(password: str, hashed: str) -> bool:
