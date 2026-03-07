@@ -118,6 +118,16 @@ services:
       KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     restart: unless-stopped
 
+  nginx:
+    build:
+      context: ./
+      dockerfile: infrastructure/nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   zookeeper_data:
