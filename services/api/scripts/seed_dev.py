@@ -16,6 +16,8 @@ import string
 import sys
 import os
 
+import bcrypt as _bcrypt
+
 # Ensure /app is on the path when run as `python scripts/seed_dev.py`
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
@@ -29,7 +31,12 @@ from app.models import (
     Plan,
     Subscriber,
 )
-from app.services.crypto import hash_password as _hash
+
+
+def _hash(password: str) -> str:
+    """Hash with bcrypt directly – bypasses passlib 1.7.4 / bcrypt 4.x incompatibility."""
+    pw_bytes = password[:72].encode("utf-8")
+    return _bcrypt.hashpw(pw_bytes, _bcrypt.gensalt()).decode("utf-8")
 
 # ---------------------------------------------------------------------------
 # Seed data
