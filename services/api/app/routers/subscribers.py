@@ -651,7 +651,7 @@ async def reset_password(
 # DELETE /subscribers/{id}
 # ---------------------------------------------------------------------------
 
-@router.delete("/{subscriber_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Soft-delete subscriber")
+@router.delete("/{subscriber_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None, summary="Soft-delete subscriber")
 async def delete_subscriber(
     subscriber_id: uuid.UUID,
     user: FranchiseeUserDep,

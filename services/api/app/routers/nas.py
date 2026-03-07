@@ -279,7 +279,7 @@ async def update_nas(
 # DELETE /nas/{id}
 # ---------------------------------------------------------------------------
 
-@router.delete("/{nas_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Delete NAS device")
+@router.delete("/{nas_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None, summary="Delete NAS device")
 async def delete_nas_device(
     nas_id: uuid.UUID,
     user: FranchiseeUserDep,

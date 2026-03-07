@@ -354,7 +354,7 @@ async def update_plan(
 # DELETE /plans/{id}
 # ---------------------------------------------------------------------------
 
-@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT, summary="Deactivate (soft-delete) plan")
+@router.delete("/{plan_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None, summary="Deactivate (soft-delete) plan")
 async def delete_plan(
     plan_id: uuid.UUID,
     user: FranchiseeUserDep,

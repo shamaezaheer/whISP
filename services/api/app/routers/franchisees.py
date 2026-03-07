@@ -533,6 +533,7 @@ async def create_franchisee_user(
 
 @router.delete("/{franchisee_id}/users/{franchisee_user_id}",
                status_code=status.HTTP_204_NO_CONTENT,
+               response_model=None,
                summary="Deactivate franchisee staff user")
 async def deactivate_franchisee_user(
     franchisee_id: uuid.UUID,

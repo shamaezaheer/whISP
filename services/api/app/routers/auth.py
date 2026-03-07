@@ -226,7 +226,7 @@ async def refresh_token(body: RefreshRequest, request: Request):
 # POST /auth/logout
 # ---------------------------------------------------------------------------
 
-@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, summary="Logout / revoke token")
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT, response_model=None, summary="Logout / revoke token")
 async def logout(request: Request, user: CurrentUser):
     from app.config import get_settings
 
