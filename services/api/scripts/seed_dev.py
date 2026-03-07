@@ -31,7 +31,13 @@ from app.models import (
     Subscriber,
 )
 
-pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
+pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def _hash(password: str) -> str:
+    """Truncate to 72 bytes before hashing – bcrypt >= 4.0 raises
+    ValueError at the C level before passlib can intercept it."""
+    return pwd_ctx.hash(password.encode("utf-8")[:72])
 
 # ---------------------------------------------------------------------------
 # Seed data
@@ -214,7 +220,7 @@ async def seed() -> None:
                 name=f"Owner of {f.name}",
                 email=f"owner@{f.slug}.bd",
                 phone=_rand_phone(),
-                password_hash=pwd_ctx.hash(owner_pw),
+                password_hash=_hash(owner_pw),
                 role="owner",
                 is_active=True,
             )
@@ -261,9 +267,9 @@ async def seed() -> None:
                 email=f"{username}@example.bd",
                 phone=_rand_phone(),
                 username=username,
-                password_hash=pwd_ctx.hash(portal_pw),
+                password_hash=_hash(portal_pw),
                 pppoe_password_enc=pppoe_pw,  # plain for dev; encrypted in prod
-                portal_password_hash=pwd_ctx.hash(portal_pw),
+                portal_password_hash=_hash(portal_pw),
                 status=random.choice(["active", "active", "active", "suspended", "expired"]),
                 quota_used_bytes=random.randint(0, plan.download_kbps * 1024 * 10),
             )
