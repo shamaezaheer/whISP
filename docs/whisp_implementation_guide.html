@@ -179,7 +179,7 @@
   <div class="cover-title">Implementation Guide</div>
   <div class="cover-sub">Architecture · Setup · API Reference · Deployment</div>
   <div class="cover-meta">
-    <div class="cover-meta-item"><label>Version</label><span>1.0</span></div>
+    <div class="cover-meta-item"><label>Version</label><span>1.1</span></div>
     <div class="cover-meta-item"><label>Platform</label><span>Bangladesh</span></div>
     <div class="cover-meta-item"><label>Date</label><span>March 2026</span></div>
     <div class="cover-meta-item"><label>Status</label><span>Internal Use</span></div>
@@ -204,7 +204,7 @@
   <div class="toc-entry"><span class="toc-num">10</span><span class="toc-label">RADIUS / FreeRADIUS Integration</span></div>
   <div class="toc-entry"><span class="toc-num">11</span><span class="toc-label">OTT Partner Integration</span></div>
   <div class="toc-entry"><span class="toc-num">12</span><span class="toc-label">Frontend Setup</span></div>
-  <div class="toc-sub">12.1 Franchisee CMS · 12.2 User Portal</div>
+  <div class="toc-sub">12.1 Franchisee CMS · 12.2 User Portal · 12.3 Docker / Nginx Build</div>
   <div class="toc-entry"><span class="toc-num">13</span><span class="toc-label">Running Tests</span></div>
   <div class="toc-entry"><span class="toc-num">14</span><span class="toc-label">Production Deployment (Kubernetes)</span></div>
   <div class="toc-entry"><span class="toc-num">15</span><span class="toc-label">Troubleshooting</span></div>
@@ -839,7 +839,42 @@ npm run dev      # http://localhost:3001</pre>
   <p>Both portals proxy <code>/api</code> to the backend automatically in development:</p>
   <pre>// vite.config.js
 proxy: { '/api': { target: 'http://localhost:8000', changeOrigin: true } }</pre>
-  <p>In production, Nginx handles this routing (see §14).</p>
+  <p>In production, Nginx handles routing via the containerised build below.</p>
+
+  <h2>12.3 Docker / Nginx Build (production)</h2>
+  <p>Both SPAs are built inside Docker and served by an <code>nginx:1.25-alpine</code> container. A single multi-stage <code>Dockerfile</code> at <code>infrastructure/nginx/Dockerfile</code> handles everything — no Node.js required on the host for production builds.</p>
+
+  <h3>Build stages</h3>
+  <table>
+    <tr><th>Stage</th><th>Base image</th><th>Output</th></tr>
+    <tr><td><code>build-cms</code></td><td>node:20-alpine</td><td><code>/app/dist</code> → copied to <code>/usr/share/nginx/cms</code></td></tr>
+    <tr><td><code>build-portal</code></td><td>node:20-alpine</td><td><code>/app/dist</code> → copied to <code>/usr/share/nginx/portal</code></td></tr>
+    <tr><td>final</td><td>nginx:1.25-alpine</td><td>serves both apps + existing <code>nginx.conf</code></td></tr>
+  </table>
+
+  <h3>Base-path configuration</h3>
+  <p><code>frontend/franchisee-cms/vite.config.js</code> sets <code>base: '/cms/'</code> in production so that built asset references resolve correctly under the <code>/cms/</code> nginx location. The user-portal is served at <code>/</code> and requires no base change.</p>
+  <pre>// franchisee-cms/vite.config.js
+base: process.env.NODE_ENV === 'production' ? '/cms/' : '/',</pre>
+
+  <h3>docker-compose usage</h3>
+  <pre># Build nginx image (includes both frontend builds)
+docker compose build nginx
+
+# Start everything
+docker compose up -d</pre>
+
+  <h3>URL routing</h3>
+  <table>
+    <tr><th>URL</th><th>Served from</th></tr>
+    <tr><td><code>http://localhost/</code></td><td>User Portal SPA (<code>/usr/share/nginx/portal</code>)</td></tr>
+    <tr><td><code>http://localhost/cms/</code></td><td>Franchisee CMS SPA (<code>/usr/share/nginx/cms</code>)</td></tr>
+    <tr><td><code>http://localhost/api/</code></td><td>FastAPI — proxied to <code>api:8000</code></td></tr>
+  </table>
+
+  <div class="callout callout-info">
+    <strong>Dev vs prod:</strong> For active UI development use <code>npm run dev</code> (Vite HMR, ports 3000/3001). The Docker build is intended for CI, staging, and production where Nginx serves pre-built static files.
+  </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════════════ §13 ══ -->
