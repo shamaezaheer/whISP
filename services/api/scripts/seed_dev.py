@@ -35,9 +35,11 @@ pwd_ctx = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def _hash(password: str) -> str:
-    """Truncate to 72 bytes before hashing – bcrypt >= 4.0 raises
-    ValueError at the C level before passlib can intercept it."""
-    return pwd_ctx.hash(password.encode("utf-8")[:72])
+    """Slice to 72 chars before hashing.
+    token_urlsafe is ASCII-only so 1 char == 1 byte — no UTF-8 truncation risk.
+    Pass a str, not bytes: CryptContext.hash() expects str and will
+    re-encode bytes as their repr (b'...'), making the payload longer."""
+    return pwd_ctx.hash(password[:72])
 
 # ---------------------------------------------------------------------------
 # Seed data
