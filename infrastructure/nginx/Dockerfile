@@ -2,7 +2,7 @@
 FROM node:20-alpine AS build-cms
 WORKDIR /app
 COPY frontend/franchisee-cms/package*.json ./
-RUN npm ci
+RUN npm install --prefer-offline
 COPY frontend/franchisee-cms/ ./
 RUN npm run build
 
@@ -10,7 +10,7 @@ RUN npm run build
 FROM node:20-alpine AS build-portal
 WORKDIR /app
 COPY frontend/user-portal/package*.json ./
-RUN npm ci
+RUN npm install --prefer-offline
 COPY frontend/user-portal/ ./
 RUN npm run build
 
