@@ -38,6 +38,10 @@ def _hash(password: str) -> str:
     pw_bytes = password[:72].encode("utf-8")
     return _bcrypt.hashpw(pw_bytes, _bcrypt.gensalt()).decode("utf-8")
 
+
+# Fixed dev password for all franchisee staff — change before production
+DEV_STAFF_PASSWORD = "Password@123"
+
 # ---------------------------------------------------------------------------
 # Seed data
 # ---------------------------------------------------------------------------
@@ -213,18 +217,17 @@ async def seed() -> None:
 
         print("Seeding franchisee owner users …")
         for f in franchisee_objs:
-            owner_pw = _rand_password()
             user = FranchiseeUser(
                 franchisee_id=f.id,
                 name=f"Owner of {f.name}",
                 email=f"owner@{f.slug}.bd",
                 phone=_rand_phone(),
-                password_hash=_hash(owner_pw),
+                password_hash=_hash(DEV_STAFF_PASSWORD),
                 role="owner",
                 is_active=True,
             )
             db.add(user)
-            print(f"  {f.name}: owner email=owner@{f.slug}.bd  password={owner_pw}")
+            print(f"  {f.name}: owner email=owner@{f.slug}.bd  password={DEV_STAFF_PASSWORD}")
 
         print("Seeding NAS devices …")
         for idx, f in enumerate(franchisee_objs):
