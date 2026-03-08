@@ -70,7 +70,7 @@ function Layout({ children }) {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter basename="/cms">
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/*" element={
