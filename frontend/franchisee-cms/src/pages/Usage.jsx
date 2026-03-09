@@ -76,7 +76,7 @@ export default function Usage() {
     setLoading(true)
     try {
       const res = await axios.get(`/api/usage/franchisee/chart?range=${r}`)
-      if (res.data?.length) setChartData(res.data)
+      if (Array.isArray(res.data) && res.data.length) setChartData(res.data)
       else setChartData(generateMockChart(r))
       setApiError(false)
     } catch {

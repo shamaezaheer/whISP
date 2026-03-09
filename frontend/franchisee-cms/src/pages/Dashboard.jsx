@@ -82,7 +82,7 @@ export default function Dashboard() {
 
     try {
       const chartRes = await axios.get('/api/usage/franchisee/chart?range=24h')
-      if (chartRes.data?.length) setChartData(chartRes.data)
+      if (Array.isArray(chartRes.data) && chartRes.data.length) setChartData(chartRes.data)
     } catch {
       // keep mock
     }
