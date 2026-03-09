@@ -104,7 +104,8 @@ export default function Devices() {
     setLoading(true)
     try {
       const res = await axios.get('/api/nas')
-      setDevices(res.data?.items || res.data?.devices || MOCK_DEVICES)
+      const data = res.data?.items ?? res.data?.devices ?? res.data
+      setDevices(Array.isArray(data) ? data : MOCK_DEVICES)
       setApiError(false)
     } catch {
       setApiError(true)

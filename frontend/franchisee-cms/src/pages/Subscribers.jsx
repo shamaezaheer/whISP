@@ -162,7 +162,8 @@ export default function Subscribers() {
     setLoading(true)
     try {
       const res = await axios.get('/api/subscribers')
-      setSubscribers(res.data?.items || res.data?.subscribers || MOCK_SUBSCRIBERS)
+      const data = res.data?.items ?? res.data?.subscribers ?? res.data
+      setSubscribers(Array.isArray(data) ? data : MOCK_SUBSCRIBERS)
       setApiError(false)
     } catch {
       setApiError(true)

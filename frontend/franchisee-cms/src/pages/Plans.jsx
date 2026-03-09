@@ -179,7 +179,8 @@ export default function Plans() {
     setLoading(true)
     try {
       const res = await axios.get('/api/plans')
-      setPlans(res.data?.items || res.data?.plans || MOCK_PLANS)
+      const data = res.data?.items ?? res.data?.plans ?? res.data
+      setPlans(Array.isArray(data) ? data : MOCK_PLANS)
       setApiError(false)
     } catch {
       setApiError(true)
