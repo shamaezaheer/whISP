@@ -64,7 +64,8 @@ export default function Dashboard() {
         axios.get('/api/usage/franchisee/sessions'),
       ])
       setOverview(ovRes.data)
-      setSessions(sessRes.data?.sessions || sessRes.data || MOCK_SESSIONS)
+      const sessData = sessRes.data?.sessions ?? sessRes.data
+      setSessions(Array.isArray(sessData) ? sessData : MOCK_SESSIONS)
       setApiError(false)
     } catch {
       setApiError(true)
@@ -73,7 +74,8 @@ export default function Dashboard() {
 
     try {
       const topRes = await axios.get('/api/usage/franchisee/top-consumers')
-      setTopConsumers(topRes.data?.consumers || topRes.data || MOCK_TOP_CONSUMERS)
+      const topData = topRes.data?.consumers ?? topRes.data
+      setTopConsumers(Array.isArray(topData) ? topData : MOCK_TOP_CONSUMERS)
     } catch {
       // keep mock
     }

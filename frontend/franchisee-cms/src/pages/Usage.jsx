@@ -90,7 +90,8 @@ export default function Usage() {
   const fetchTop = useCallback(async () => {
     try {
       const res = await axios.get('/api/usage/franchisee/top-consumers')
-      setTopConsumers(res.data?.consumers || res.data || MOCK_TOP)
+      const topData = res.data?.consumers ?? res.data
+      setTopConsumers(Array.isArray(topData) ? topData : MOCK_TOP)
     } catch {
       // keep mock
     }
@@ -99,7 +100,8 @@ export default function Usage() {
   const fetchSessions = useCallback(async () => {
     try {
       const res = await axios.get('/api/usage/franchisee/sessions')
-      setSessions(res.data?.sessions || res.data || MOCK_SESSIONS)
+      const sessData = res.data?.sessions ?? res.data
+      setSessions(Array.isArray(sessData) ? sessData : MOCK_SESSIONS)
     } catch {
       // keep mock
     }
