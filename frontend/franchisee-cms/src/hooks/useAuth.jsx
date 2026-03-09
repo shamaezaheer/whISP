@@ -3,8 +3,15 @@ import axios from 'axios'
 
 const AuthContext = createContext(null)
 
+// Set header synchronously at module load so it is present before any
+// child component useEffect fires (children effects run before parents).
+const _initialToken = localStorage.getItem('whisp_token')
+if (_initialToken) {
+  axios.defaults.headers.common['Authorization'] = `Bearer ${_initialToken}`
+}
+
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('whisp_token'))
+  const [token, setToken] = useState(_initialToken)
   const [user, setUser] = useState(() => {
     try {
       const u = localStorage.getItem('whisp_user')
