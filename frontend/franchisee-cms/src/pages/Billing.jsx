@@ -87,7 +87,7 @@ export default function Billing() {
       if (dateFrom) params.from = dateFrom
       if (dateTo) params.to = dateTo
       const res = await axios.get('/api/payments', { params })
-      setPayments(res.data?.payments || res.data || MOCK_PAYMENTS)
+      setPayments(res.data?.items || res.data?.payments || MOCK_PAYMENTS)
       setApiError(false)
     } catch {
       setApiError(true)

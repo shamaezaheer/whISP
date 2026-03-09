@@ -80,88 +80,88 @@ async def franchisee_overview(
         if franchisee_id:
             assert_franchisee_scope(user, str(franchisee_id))
 
+    _empty_overview = {
+        "franchisee_id": str(fid),
+        "active_sessions": 0,
+        "subscribers_online": 0,
+        "total_download_today_bytes": 0,
+        "total_upload_today_bytes": 0,
+        "total_download_month_bytes": 0,
+        "bandwidth_mbps_current": 0.0,
+    }
+
     usernames = await _get_franchisee_usernames(conn, db, fid)
     if not usernames:
-        return {
-            "franchisee_id": str(fid),
-            "active_sessions": 0,
-            "subscribers_online": 0,
-            "total_download_today_bytes": 0,
-            "total_upload_today_bytes": 0,
-            "total_download_month_bytes": 0,
-            "bandwidth_mbps_current": 0.0,
-        }
+        return _empty_overview
 
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     month_start = datetime.now(timezone.utc).replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
-    # Active sessions count
-    active_sessions_row = await conn.fetchrow(
-        """
-        SELECT COUNT(*) AS cnt
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstoptime IS NULL
-        """,
-        usernames,
-    )
-    active_sessions = active_sessions_row["cnt"] if active_sessions_row else 0
+    try:
+        active_sessions_row = await conn.fetchrow(
+            """
+            SELECT COUNT(*) AS cnt
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstoptime IS NULL
+            """,
+            usernames,
+        )
+        active_sessions = active_sessions_row["cnt"] if active_sessions_row else 0
 
-    # Today download/upload
-    today_row = await conn.fetchrow(
-        """
-        SELECT
-            COALESCE(SUM(acctinputoctets), 0)  AS dl_bytes,
-            COALESCE(SUM(acctoutputoctets), 0) AS ul_bytes
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstarttime >= $2
-        """,
-        usernames,
-        today_start,
-    )
+        today_row = await conn.fetchrow(
+            """
+            SELECT
+                COALESCE(SUM(acctinputoctets), 0)  AS dl_bytes,
+                COALESCE(SUM(acctoutputoctets), 0) AS ul_bytes
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstarttime >= $2
+            """,
+            usernames,
+            today_start,
+        )
 
-    # Month download
-    month_row = await conn.fetchrow(
-        """
-        SELECT COALESCE(SUM(acctinputoctets), 0) AS dl_bytes
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstarttime >= $2
-        """,
-        usernames,
-        month_start,
-    )
+        month_row = await conn.fetchrow(
+            """
+            SELECT COALESCE(SUM(acctinputoctets), 0) AS dl_bytes
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstarttime >= $2
+            """,
+            usernames,
+            month_start,
+        )
 
-    # Estimate current bandwidth from sessions active in last 5 minutes
-    # acctinputoctets is bytes downloaded by NAS (upload from client perspective)
-    bw_row = await conn.fetchrow(
-        """
-        SELECT
-            COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) AS total_bytes,
-            COALESCE(SUM(acctsessiontime), 1) AS total_seconds
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstoptime IS NULL
-          AND acctstarttime >= NOW() - INTERVAL '5 minutes'
-        """,
-        usernames,
-    )
+        bw_row = await conn.fetchrow(
+            """
+            SELECT
+                COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) AS total_bytes,
+                COALESCE(SUM(acctsessiontime), 1) AS total_seconds
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstoptime IS NULL
+              AND acctstarttime >= NOW() - INTERVAL '5 minutes'
+            """,
+            usernames,
+        )
 
-    total_bytes = int(bw_row["total_bytes"]) if bw_row else 0
-    total_secs = max(int(bw_row["total_seconds"]), 1) if bw_row else 1
-    bandwidth_bps = total_bytes / total_secs
-    bandwidth_mbps = round(bandwidth_bps * 8 / 1_000_000, 2)
+        total_bytes = int(bw_row["total_bytes"]) if bw_row else 0
+        total_secs = max(int(bw_row["total_seconds"]), 1) if bw_row else 1
+        bandwidth_mbps = round(total_bytes / total_secs * 8 / 1_000_000, 2)
 
-    return {
-        "franchisee_id": str(fid),
-        "active_sessions": active_sessions,
-        "subscribers_online": active_sessions,
-        "total_download_today_bytes": int(today_row["dl_bytes"]) if today_row else 0,
-        "total_upload_today_bytes": int(today_row["ul_bytes"]) if today_row else 0,
-        "total_download_month_bytes": int(month_row["dl_bytes"]) if month_row else 0,
-        "bandwidth_mbps_current": bandwidth_mbps,
-    }
+        return {
+            "franchisee_id": str(fid),
+            "active_sessions": active_sessions,
+            "subscribers_online": active_sessions,
+            "total_download_today_bytes": int(today_row["dl_bytes"]) if today_row else 0,
+            "total_upload_today_bytes": int(today_row["ul_bytes"]) if today_row else 0,
+            "total_download_month_bytes": int(month_row["dl_bytes"]) if month_row else 0,
+            "bandwidth_mbps_current": bandwidth_mbps,
+        }
+    except Exception:
+        log.warning("radacct_query_failed_returning_zeros", franchisee_id=str(fid))
+        return _empty_overview
 
 
 # ---------------------------------------------------------------------------
@@ -192,30 +192,33 @@ async def franchisee_chart(
     if not usernames:
         return {"franchisee_id": str(fid), "range": range, "data": []}
 
-    rows = await conn.fetch(
-        """
-        SELECT
-            date_trunc('hour', acctstarttime)              AS bucket,
-            COALESCE(SUM(acctinputoctets), 0)              AS bytes_in,
-            COALESCE(SUM(acctoutputoctets), 0)             AS bytes_out
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstarttime >= $2
-        GROUP BY bucket
-        ORDER BY bucket ASC
-        """,
-        usernames,
-        since,
-    )
-
-    data = [
-        {
-            "time": row["bucket"].isoformat(),
-            "bytes_in": int(row["bytes_in"]),
-            "bytes_out": int(row["bytes_out"]),
-        }
-        for row in rows
-    ]
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT
+                date_trunc('hour', acctstarttime)              AS bucket,
+                COALESCE(SUM(acctinputoctets), 0)              AS bytes_in,
+                COALESCE(SUM(acctoutputoctets), 0)             AS bytes_out
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstarttime >= $2
+            GROUP BY bucket
+            ORDER BY bucket ASC
+            """,
+            usernames,
+            since,
+        )
+        data = [
+            {
+                "time": row["bucket"].isoformat(),
+                "bytes_in": int(row["bytes_in"]),
+                "bytes_out": int(row["bytes_out"]),
+            }
+            for row in rows
+        ]
+    except Exception:
+        log.warning("radacct_chart_query_failed", franchisee_id=str(fid))
+        data = []
 
     return {"franchisee_id": str(fid), "range": range, "data": data}
 
@@ -267,30 +270,29 @@ async def franchisee_top_consumers(
 
     usernames = list(sub_data.keys())
 
-    # Query radacct for this month's usage
-    rows = await conn.fetch(
-        """
-        SELECT
-            username,
-            COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) AS bytes_used
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstarttime >= $2
-        GROUP BY username
-        ORDER BY bytes_used DESC
-        LIMIT 10
-        """,
-        usernames,
-        month_start,
-    )
-
-    top = []
-    for row in rows:
-        info = sub_data.get(row["username"], {})
-        top.append({
-            **info,
-            "bytes_used_this_month": int(row["bytes_used"]),
-        })
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT
+                username,
+                COALESCE(SUM(acctinputoctets + acctoutputoctets), 0) AS bytes_used
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstarttime >= $2
+            GROUP BY username
+            ORDER BY bytes_used DESC
+            LIMIT 10
+            """,
+            usernames,
+            month_start,
+        )
+        top = [
+            {**sub_data.get(row["username"], {}), "bytes_used_this_month": int(row["bytes_used"])}
+            for row in rows
+        ]
+    except Exception:
+        log.warning("radacct_top_consumers_query_failed", franchisee_id=str(fid))
+        top = []
 
     return {"franchisee_id": str(fid), "top_consumers": top}
 
@@ -317,34 +319,37 @@ async def franchisee_sessions(
 
     usernames = await _get_franchisee_usernames(conn, db, fid)
     if not usernames:
-        return {"franchisee_id": str(fid), "sessions": []}
+        return {"franchisee_id": str(fid), "session_count": 0, "sessions": []}
 
-    rows = await conn.fetch(
-        """
-        SELECT
-            username,
-            nasipaddress,
-            framedipaddress,
-            acctstarttime,
-            acctsessiontime,
-            acctinputoctets,
-            acctoutputoctets,
-            acctterminatecause,
-            callingstationid
-        FROM radacct
-        WHERE username = ANY($1::text[])
-          AND acctstoptime IS NULL
-        ORDER BY acctstarttime DESC
-        """,
-        usernames,
-    )
-
-    sessions = []
-    for row in rows:
-        s = dict(row)
-        if isinstance(s.get("acctstarttime"), datetime):
-            s["acctstarttime"] = s["acctstarttime"].isoformat()
-        sessions.append(s)
+    try:
+        rows = await conn.fetch(
+            """
+            SELECT
+                username,
+                nasipaddress,
+                framedipaddress,
+                acctstarttime,
+                acctsessiontime,
+                acctinputoctets,
+                acctoutputoctets,
+                acctterminatecause,
+                callingstationid
+            FROM radacct
+            WHERE username = ANY($1::text[])
+              AND acctstoptime IS NULL
+            ORDER BY acctstarttime DESC
+            """,
+            usernames,
+        )
+        sessions = []
+        for row in rows:
+            s = dict(row)
+            if isinstance(s.get("acctstarttime"), datetime):
+                s["acctstarttime"] = s["acctstarttime"].isoformat()
+            sessions.append(s)
+    except Exception:
+        log.warning("radacct_sessions_query_failed", franchisee_id=str(fid))
+        sessions = []
 
     return {"franchisee_id": str(fid), "session_count": len(sessions), "sessions": sessions}
 

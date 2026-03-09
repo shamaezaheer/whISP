@@ -179,7 +179,7 @@ export default function Plans() {
     setLoading(true)
     try {
       const res = await axios.get('/api/plans')
-      setPlans(res.data?.plans || res.data || MOCK_PLANS)
+      setPlans(res.data?.items || res.data?.plans || MOCK_PLANS)
       setApiError(false)
     } catch {
       setApiError(true)

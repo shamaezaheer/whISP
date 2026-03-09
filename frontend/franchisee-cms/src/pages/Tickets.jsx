@@ -293,7 +293,7 @@ export default function Tickets() {
     setLoading(true)
     try {
       const res = await axios.get('/api/tickets')
-      setTickets(res.data?.tickets || res.data || MOCK_TICKETS)
+      setTickets(res.data?.items || res.data?.tickets || MOCK_TICKETS)
       setApiError(false)
     } catch {
       setApiError(true)

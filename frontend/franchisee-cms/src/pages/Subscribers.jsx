@@ -162,7 +162,7 @@ export default function Subscribers() {
     setLoading(true)
     try {
       const res = await axios.get('/api/subscribers')
-      setSubscribers(res.data?.subscribers || res.data || MOCK_SUBSCRIBERS)
+      setSubscribers(res.data?.items || res.data?.subscribers || MOCK_SUBSCRIBERS)
       setApiError(false)
     } catch {
       setApiError(true)
@@ -174,7 +174,7 @@ export default function Subscribers() {
   const fetchPlans = useCallback(async () => {
     try {
       const res = await axios.get('/api/plans')
-      setPlans(res.data?.plans || res.data || MOCK_PLANS)
+      setPlans(res.data?.items || res.data?.plans || MOCK_PLANS)
     } catch {
       // keep mock
     }
