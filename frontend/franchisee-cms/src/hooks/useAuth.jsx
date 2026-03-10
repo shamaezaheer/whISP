@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
       err => {
         if (err.response?.status === 401) {
           logout()
-          window.location.href = '/login'
+          window.location.href = '/'
         }
         return Promise.reject(err)
       }
