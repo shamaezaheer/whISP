@@ -1,27 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import axios from 'axios'
+import { useAuth } from '../hooks/useAuth'
 
-const MOCK_DEVICES = [
-  {
-    id: 1, name: 'NAS-01', ip: '10.0.0.1', type: 'MikroTik',
-    status: 'online', last_seen: '2026-03-04 09:18', coa_port: 3799,
-    description: 'Main gateway router'
-  },
-  {
-    id: 2, name: 'NAS-02', ip: '10.0.0.2', type: 'MikroTik',
-    status: 'online', last_seen: '2026-03-04 09:17', coa_port: 3799,
-    description: 'Secondary NAS'
-  },
-  {
-    id: 3, name: 'NAS-03', ip: '10.0.0.3', type: 'Cisco',
-    status: 'offline', last_seen: '2026-03-03 14:22', coa_port: 1700,
-    description: 'Backup device'
-  },
-]
-
-function DeviceModal({ onClose, onSave }) {
+function DeviceModal({ franchiseeId, onClose, onSave }) {
   const [form, setForm] = useState({
-    name: '', ip: '', secret: '', coa_port: 3799, description: ''
+    name: '', ip_address: '', secret: '', coa_port: 3799, description: ''
   })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
@@ -33,10 +16,13 @@ function DeviceModal({ onClose, onSave }) {
     setSaving(true)
     setErr('')
     try {
-      await onSave(form)
+      await onSave({ ...form, franchisee_id: franchiseeId })
       onClose()
     } catch (ex) {
-      setErr(ex.response?.data?.detail || 'Failed to register device')
+      const detail = ex.response?.data?.detail
+      setErr(Array.isArray(detail)
+        ? detail.map(d => d.msg).join(', ')
+        : detail || 'Failed to register device')
     } finally {
       setSaving(false)
     }
@@ -58,12 +44,12 @@ function DeviceModal({ onClose, onSave }) {
               </div>
               <div className="form-group">
                 <label>IP Address</label>
-                <input type="text" value={form.ip} onChange={e => set('ip', e.target.value)} required placeholder="10.0.0.4" />
+                <input type="text" value={form.ip_address} onChange={e => set('ip_address', e.target.value)} required placeholder="10.0.0.4" />
               </div>
             </div>
             <div className="form-group">
-              <label>RADIUS Secret</label>
-              <input type="password" value={form.secret} onChange={e => set('secret', e.target.value)} required placeholder="••••••••" />
+              <label>RADIUS Secret <span style={{ color: '#555', fontWeight: 400 }}>(leave blank to inherit franchisee secret)</span></label>
+              <input type="password" value={form.secret} onChange={e => set('secret', e.target.value)} placeholder="Leave blank to auto-assign" />
             </div>
             <div className="form-group">
               <label>CoA Port</label>
@@ -92,8 +78,16 @@ function DeviceModal({ onClose, onSave }) {
   )
 }
 
+function deviceStatus(d) {
+  if (!d.is_active) return 'inactive'
+  if (!d.last_seen_at) return 'unknown'
+  const diffMin = (Date.now() - new Date(d.last_seen_at).getTime()) / 60000
+  return diffMin < 10 ? 'online' : 'offline'
+}
+
 export default function Devices() {
-  const [devices, setDevices] = useState(MOCK_DEVICES)
+  const { user } = useAuth()
+  const [devices, setDevices] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [apiError, setApiError] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -105,7 +99,7 @@ export default function Devices() {
     try {
       const res = await axios.get('/api/nas')
       const data = res.data?.items ?? res.data?.devices ?? res.data
-      setDevices(Array.isArray(data) ? data : MOCK_DEVICES)
+      setDevices(Array.isArray(data) ? data : [])
       setApiError(false)
     } catch {
       setApiError(true)
@@ -117,18 +111,11 @@ export default function Devices() {
   useEffect(() => { fetchDevices() }, [fetchDevices])
 
   const handleRegister = async (form) => {
-    try {
-      const res = await axios.post('/api/nas', form)
-      setDevices(prev => [...prev, res.data])
-    } catch {
-      setDevices(prev => [...prev, {
-        ...form,
-        id: Date.now(),
-        type: 'MikroTik',
-        status: 'unknown',
-        last_seen: 'Never',
-      }])
-    }
+    // Strip blank secret so API inherits from franchisee
+    const payload = { ...form }
+    if (!payload.secret) delete payload.secret
+    const res = await axios.post('/api/nas', payload)
+    setDevices(prev => [...prev, res.data])
   }
 
   const handleTestCoA = async (device) => {
@@ -139,20 +126,18 @@ export default function Devices() {
       setCoaResults(prev => ({
         ...prev,
         [device.id]: {
-          success: res.data.success !== false,
-          latency_ms: res.data.latency_ms || null,
-          message: res.data.message || 'CoA test successful'
+          success: res.data.success,
+          latency_ms: res.data.latency_ms,
+          message: res.data.message,
         }
       }))
-    } catch {
-      // Mock result
-      const mockLatency = Math.round(Math.random() * 30 + 5)
+    } catch (ex) {
       setCoaResults(prev => ({
         ...prev,
         [device.id]: {
-          success: device.status === 'online',
-          latency_ms: device.status === 'online' ? mockLatency : null,
-          message: device.status === 'online' ? 'CoA test successful' : 'Connection refused'
+          success: false,
+          latency_ms: null,
+          message: ex.response?.data?.detail || 'CoA test failed',
         }
       }))
     } finally {
@@ -171,27 +156,7 @@ export default function Devices() {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      // Mock config download
-      const mockConfig = `# whISP NAS Configuration for ${device.name}
-# Generated: ${new Date().toISOString()}
-# IP: ${device.ip}
-
-/radius
-add address=${device.ip} secret=YOUR_SECRET service=ppp timeout=3s
-
-/ip hotspot user profile
-add name=default rate-limit=10M/5M
-
-/ppp profile
-add name=whisp-profile use-radius=yes
-`
-      const blob = new Blob([mockConfig], { type: 'text/plain' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${device.name.toLowerCase().replace(/\s+/g, '-')}.rsc`
-      a.click()
-      URL.revokeObjectURL(url)
+      alert('Failed to download config — API unavailable')
     }
   }
 
@@ -199,10 +164,10 @@ add name=whisp-profile use-radius=yes
     if (!confirm(`Delete device "${device.name}"?`)) return
     try {
       await axios.delete(`/api/nas/${device.id}`)
-    } catch {
-      // mock
+      setDevices(prev => prev.filter(d => d.id !== device.id))
+    } catch (ex) {
+      alert(ex.response?.data?.detail || 'Failed to delete device')
     }
-    setDevices(prev => prev.filter(d => d.id !== device.id))
   }
 
   return (
@@ -210,7 +175,7 @@ add name=whisp-profile use-radius=yes
       <div className="page-header">
         <div className="page-title">Devices</div>
         <div className="flex items-center gap-2">
-          {apiError && <span style={{ fontSize: 11, color: '#ffaa00' }}>Mock data</span>}
+          {apiError && <span style={{ fontSize: 11, color: '#ffaa00' }}>API unavailable</span>}
           <button className="btn" onClick={() => setShowModal(true)}>+ Register Device</button>
         </div>
       </div>
@@ -235,6 +200,7 @@ add name=whisp-profile use-radius=yes
                 </thead>
                 <tbody>
                   {devices.map(d => {
+                    const status = deviceStatus(d)
                     const coaRes = coaResults[d.id]
                     const testing = coaTesting[d.id]
                     return (
@@ -245,21 +211,22 @@ add name=whisp-profile use-radius=yes
                             <div className="text-muted" style={{ fontSize: 10 }}>{d.description}</div>
                           )}
                         </td>
-                        <td className="text-muted">{d.ip}</td>
-                        <td style={{ fontSize: 11 }}>{d.type}</td>
+                        <td className="text-muted">{d.ip_address}</td>
+                        <td style={{ fontSize: 11 }}>{d.nas_type}</td>
                         <td>
-                          <span className={`badge ${d.status === 'online' ? 'badge-active' : d.status === 'offline' ? 'badge-suspended' : 'badge-pending'}`}>
-                            {d.status}
+                          <span className={`badge ${status === 'online' ? 'badge-active' : status === 'offline' ? 'badge-suspended' : 'badge-pending'}`}>
+                            {status}
                           </span>
                         </td>
-                        <td className="text-muted" style={{ fontSize: 11 }}>{d.last_seen}</td>
+                        <td className="text-muted" style={{ fontSize: 11 }}>
+                          {d.last_seen_at ? new Date(d.last_seen_at).toLocaleString() : 'Never'}
+                        </td>
                         <td>
                           {coaRes ? (
-                            <span style={{
-                              fontSize: 11,
-                              color: coaRes.success ? '#00ff88' : '#ff4444'
-                            }}>
-                              {coaRes.success ? `OK ${coaRes.latency_ms ? `(${coaRes.latency_ms}ms)` : ''}` : coaRes.message}
+                            <span style={{ fontSize: 11, color: coaRes.success ? '#00ff88' : '#ff4444' }}>
+                              {coaRes.success
+                                ? `OK${coaRes.latency_ms ? ` (${coaRes.latency_ms}ms)` : ''}`
+                                : coaRes.message}
                             </span>
                           ) : (
                             <span className="text-muted" style={{ fontSize: 11 }}>—</span>
@@ -294,7 +261,7 @@ add name=whisp-profile use-radius=yes
                   {devices.length === 0 && (
                     <tr>
                       <td colSpan={7} style={{ textAlign: 'center', color: '#555', padding: 32 }}>
-                        No devices registered
+                        {apiError ? 'Could not load devices — check API connection' : 'No devices registered'}
                       </td>
                     </tr>
                   )}
@@ -307,6 +274,7 @@ add name=whisp-profile use-radius=yes
 
       {showModal && (
         <DeviceModal
+          franchiseeId={user?.franchisee_id}
           onClose={() => setShowModal(false)}
           onSave={handleRegister}
         />
