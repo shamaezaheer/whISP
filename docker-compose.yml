@@ -128,6 +128,16 @@ services:
       - api
     restart: unless-stopped
 
+  franchisee-cms:
+    build:
+      context: ./frontend/franchisee-cms
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   zookeeper_data:
