@@ -6,6 +6,7 @@ CoA testing, and MikroTik config script generation.
 """
 from __future__ import annotations
 
+import asyncio
 import time
 import uuid
 from datetime import datetime, timezone
@@ -331,20 +332,21 @@ async def test_coa(
     success = False
 
     try:
-        success = await send_disconnect(
+        await send_disconnect(
             nas_ip=nas.ip_address,
             nas_secret=nas.secret,
             username="test-coa-check",
             port=nas.coa_port,
             timeout=5.0,
         )
-        # A Disconnect-NAK for unknown user is actually expected and means CoA port is reachable
-        # We treat any response (ACK or NAK) as a connectivity success
-        if not success:
-            # NAK means the NAS responded but rejected (user not found) – port is reachable
-            success = True  # connectivity confirmed
+        # Any response (ACK or NAK) confirms CoA port is reachable.
+        # NAK for unknown user is expected and still proves connectivity.
+        success = True
+    except asyncio.TimeoutError:
+        error_msg = f"No response from {nas.ip_address}:{nas.coa_port} within 5s — check firewall/routing and that RADIUS incoming is enabled on the NAS"
+        success = False
     except Exception as exc:
-        error_msg = str(exc)
+        error_msg = str(exc) or repr(exc)
         success = False
 
     latency_ms = round((time.monotonic() - start_time) * 1000, 2)

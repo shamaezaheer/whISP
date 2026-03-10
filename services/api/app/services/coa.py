@@ -148,11 +148,13 @@ async def send_coa(
     identifier = secrets.randbelow(256)
     packet = encode_radius_packet(code, identifier, nas_secret, attributes)
 
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setblocking(False)
-    sock.settimeout(timeout)
+    # Do NOT call sock.settimeout() — it overrides setblocking(False) and
+    # puts the socket back into blocking mode, breaking asyncio I/O.
+    # Timeout is handled by asyncio.wait_for() below.
 
     try:
         await loop.sock_sendto(sock, packet, (nas_ip, port))
@@ -161,7 +163,7 @@ async def send_coa(
                 loop.sock_recv(sock, 4096), timeout=timeout
             )
         except asyncio.TimeoutError:
-            log.warning("coa_timeout", nas_ip=nas_ip, code=code)
+            log.warning("coa_timeout", nas_ip=nas_ip, code=code, port=port)
             return False
 
         response = decode_radius_response(response_data)
@@ -177,8 +179,8 @@ async def send_coa(
         return success
 
     except OSError as exc:
-        log.error("coa_send_error", nas_ip=nas_ip, error=str(exc))
-        return False
+        log.error("coa_send_error", nas_ip=nas_ip, port=port, error=str(exc))
+        raise RuntimeError(f"Socket error sending CoA to {nas_ip}:{port} — {exc}") from exc
     finally:
         sock.close()
 
