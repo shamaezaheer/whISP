@@ -50,6 +50,12 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
     volumes:
       - kafka_data:/var/lib/kafka/data
 
@@ -88,8 +94,10 @@ services:
   coa-engine:
     build: ./services/coa-engine
     depends_on:
-      - postgres
-      - kafka
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     env_file: .env
     environment:
       DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
@@ -99,8 +107,10 @@ services:
   notification:
     build: ./services/notification
     depends_on:
-      - postgres
-      - kafka
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     env_file: .env
     environment:
       DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
@@ -110,8 +120,10 @@ services:
   radius-consumer:
     build: ./services/radius-consumer
     depends_on:
-      - postgres
-      - kafka
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
     env_file: .env
     environment:
       DATABASE_URL: postgresql://isp_user:isp_password@postgres:5432/isp_platform
