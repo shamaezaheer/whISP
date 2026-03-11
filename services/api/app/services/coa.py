@@ -147,24 +147,34 @@ async def send_coa(
     """
     identifier = secrets.randbelow(256)
     packet = encode_radius_packet(code, identifier, nas_secret, attributes)
-
     loop = asyncio.get_running_loop()
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setblocking(False)
-    # Do NOT call sock.settimeout() — it overrides setblocking(False) and
-    # puts the socket back into blocking mode, breaking asyncio I/O.
-    # Timeout is handled by asyncio.wait_for() below.
+    log.debug("coa_send_attempt", nas_ip=nas_ip, port=port, code=code, packet_len=len(packet))
 
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
-        await loop.sock_sendto(sock, packet, (nas_ip, port))
+        sock.setblocking(False)
+        # Do NOT call sock.settimeout() — it overrides setblocking(False) and
+        # puts the socket back into blocking mode, breaking asyncio I/O.
+        # Timeout is handled by asyncio.wait_for() below.
+
+        try:
+            await loop.sock_sendto(sock, packet, (nas_ip, port))
+            log.debug("coa_packet_sent", nas_ip=nas_ip, port=port)
+        except OSError as exc:
+            log.error("coa_sendto_error", nas_ip=nas_ip, port=port, errno=exc.errno, error=str(exc))
+            raise RuntimeError(f"Cannot send CoA UDP to {nas_ip}:{port} — {exc}") from exc
+
         try:
             response_data = await asyncio.wait_for(
                 loop.sock_recv(sock, 4096), timeout=timeout
             )
         except asyncio.TimeoutError:
-            log.warning("coa_timeout", nas_ip=nas_ip, code=code, port=port)
+            log.warning("coa_timeout", nas_ip=nas_ip, code=code, port=port, timeout=timeout)
             return False
+        except OSError as exc:
+            log.error("coa_recv_error", nas_ip=nas_ip, port=port, errno=exc.errno, error=str(exc))
+            raise RuntimeError(f"CoA recv error from {nas_ip}:{port} — {exc}") from exc
 
         response = decode_radius_response(response_data)
         ack_code = COA_ACK if code == COA_REQUEST else DISCONNECT_ACK
@@ -178,9 +188,6 @@ async def send_coa(
         )
         return success
 
-    except OSError as exc:
-        log.error("coa_send_error", nas_ip=nas_ip, port=port, error=str(exc))
-        raise RuntimeError(f"Socket error sending CoA to {nas_ip}:{port} — {exc}") from exc
     finally:
         sock.close()
 
