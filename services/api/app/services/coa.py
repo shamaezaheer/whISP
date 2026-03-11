@@ -149,7 +149,7 @@ async def send_coa(
     packet = encode_radius_packet(code, identifier, nas_secret, attributes)
     loop = asyncio.get_running_loop()
 
-    log.debug("coa_send_attempt", nas_ip=nas_ip, port=port, code=code, packet_len=len(packet))
+    log.info("coa_send_attempt", nas_ip=nas_ip, port=port, code=code, packet_len=len(packet))
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
@@ -160,7 +160,7 @@ async def send_coa(
 
         try:
             await loop.sock_sendto(sock, packet, (nas_ip, port))
-            log.debug("coa_packet_sent", nas_ip=nas_ip, port=port)
+            log.info("coa_packet_sent", nas_ip=nas_ip, port=port)
         except OSError as exc:
             log.error("coa_sendto_error", nas_ip=nas_ip, port=port, errno=exc.errno, error=str(exc))
             raise RuntimeError(f"Cannot send CoA UDP to {nas_ip}:{port} — {exc}") from exc
