@@ -159,11 +159,19 @@ async def send_coa(
         # Timeout is handled by asyncio.wait_for() below.
 
         try:
-            await loop.sock_sendto(sock, packet, (nas_ip, port))
+            # UDP sendto is synchronous — the kernel queues the packet
+            # immediately. Using loop.sock_sendto() breaks with uvloop which
+            # does not implement that method. Direct sock.sendto() is safe and
+            # correct for small UDP datagrams.
+            sock.sendto(packet, (nas_ip, port))
             log.info("coa_packet_sent", nas_ip=nas_ip, port=port)
         except OSError as exc:
             log.error("coa_sendto_error", nas_ip=nas_ip, port=port, errno=exc.errno, error=str(exc))
             raise RuntimeError(f"Cannot send CoA UDP to {nas_ip}:{port} — {exc}") from exc
+        except Exception as exc:
+            log.error("coa_sendto_unexpected_error", nas_ip=nas_ip, port=port,
+                      exc_type=type(exc).__name__, error=repr(exc))
+            raise
 
         try:
             response_data = await asyncio.wait_for(
